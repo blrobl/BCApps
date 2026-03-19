@@ -99,6 +99,12 @@ This pipeline automates the process of publishing Pull Request changes to a Busi
 
 ### Key Features
 
+#### ✅ Upstream Repository Support
+- **Fetch PRs from microsoft/BCApps** (default)
+- Test upstream PRs in your sandbox before they're merged
+- Also supports PRs from your fork repository
+- Automatically handles fork detection and checkout
+
 #### ✅ Automated Branch Creation
 - Creates a new branch from PR automatically
 - Custom branch naming support
@@ -116,7 +122,8 @@ This pipeline automates the process of publishing Pull Request changes to a Busi
 - Handles dependencies automatically
 
 #### ✅ PR Integration
-- Posts detailed status comments
+- Posts detailed status comments (for fork PRs)
+- Creates workflow summary (for upstream PRs)
 - Links to created branches
 - Provides usage instructions
 
@@ -158,14 +165,33 @@ The pipeline is configured for:
 
 ## Usage Examples
 
-### Example 1: Standard Use Case
+### Example 1: Test Upstream PR (Most Common Use Case)
 ```
 Inputs:
-  PR number: 123
+  PR number: 7145 (from microsoft/BCApps)
+  Fetch from upstream repo: ✅ checked (default)
   Branch name: (default)
   Skip branch creation: false
 
 Result:
+  ✓ Fetches PR from microsoft/BCApps
+  ✓ Creates branch: pr-7145-sandbox-publish in your fork
+  ✓ Configures launch.json files
+  ✓ Publishes apps
+  ✓ Commits changes
+  ✓ Creates workflow summary
+```
+
+### Example 2: Test Fork PR
+```
+Inputs:
+  PR number: 123 (from your fork)
+  Fetch from upstream repo: ⬜ unchecked
+  Branch name: (default)
+  Skip branch creation: false
+
+Result:
+  ✓ Fetches PR from your fork
   ✓ Creates branch: pr-123-sandbox-publish
   ✓ Configures launch.json files
   ✓ Publishes apps
@@ -173,10 +199,11 @@ Result:
   ✓ Posts PR comment
 ```
 
-### Example 2: Custom Branch Name
+### Example 3: Custom Branch Name
 ```
 Inputs:
   PR number: 456
+  Fetch from upstream repo: ✅ checked
   Branch name: sandbox-testing-feature-x
   Skip branch creation: false
 
@@ -185,13 +212,14 @@ Result:
   ✓ Configures launch.json files
   ✓ Publishes apps
   ✓ Commits changes
-  ✓ Posts PR comment
+  ✓ Creates workflow summary
 ```
 
-### Example 3: Publish Only (No Branch)
+### Example 4: Publish Only (No Branch)
 ```
 Inputs:
   PR number: 789
+  Fetch from upstream repo: ✅ checked
   Branch name: (not used)
   Skip branch creation: true
 
@@ -199,7 +227,7 @@ Result:
   ✓ Uses PR branch directly
   ✓ Publishes apps
   ✓ No commits made
-  ✓ Posts PR comment
+  ✓ Creates workflow summary
 ```
 
 ## Developer Workflow

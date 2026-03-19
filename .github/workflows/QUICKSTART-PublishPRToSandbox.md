@@ -79,22 +79,28 @@ env:
 
 ### Step 4: Run Your First Pipeline (2 minutes)
 
-1. **Create or find a Pull Request** with some changes
+1. **Find a Pull Request** to test
+   - **From microsoft/BCApps**: Find any PR number from the upstream repo
+   - **From your fork**: Create or find a PR in your own repository
 
 2. Go to **Actions** tab → **Publish PR to Sandbox Environment**
 
 3. Click **"Run workflow"**
 
 4. Fill in:
-   - **PR number**: `123` (your PR number)
-   - **New branch name**: (leave empty)
+   - **PR number**: `123` (the PR number you want to test)
+   - **Fetch PR from upstream repo**:
+     - ✅ **Checked (default)**: Fetches from microsoft/BCApps (most common use case)
+     - ⬜ **Unchecked**: Fetches from your fork repository
+   - **New branch name**: (leave empty for default)
    - **Skip branch creation**: (leave unchecked)
 
 5. Click **"Run workflow"**
 
 6. Wait ~2-5 minutes (depending on app size)
 
-7. Check the **PR comments** for confirmation! 🎉
+7. Check the **workflow summary** for confirmation! 🎉
+   - Note: If using upstream repo, a comment won't be posted on the microsoft/BCApps PR (no permission), but you'll see the summary in the workflow run
 
 ### Step 5: Use the Configured Environment (1 minute)
 
@@ -122,7 +128,8 @@ env:
 After your first successful run:
 
 - [ ] Workflow completed successfully (green checkmark in Actions tab)
-- [ ] Comment appeared on the PR with environment details
+- [ ] Comment appeared on the PR (only if using fork PRs, not upstream)
+- [ ] Workflow summary shows deployment details (in Actions → Run → Summary)
 - [ ] New branch was created (e.g., `pr-123-sandbox-publish`)
 - [ ] launch.json files exist in `.vscode/` folders
 - [ ] Apps appear in BC Admin Center → Environment → Apps

@@ -106,6 +106,9 @@ env:
 3. **Click "Run workflow"** button
 4. **Fill in the inputs**:
    - **PR number**: The number of the pull request (e.g., `123`)
+   - **Fetch PR from upstream repo (microsoft/BCApps)**:
+     - ✅ **Checked (default)**: Fetches PR from microsoft/BCApps (recommended for testing upstream PRs)
+     - ⬜ **Unchecked**: Fetches PR from your fork repository
    - **New branch name** (optional): Custom branch name (defaults to `pr-<number>-sandbox-publish`)
    - **Skip branch creation** (optional): Check this to publish directly from the PR branch without creating a new branch
 
@@ -113,25 +116,45 @@ env:
 
 ### Example Scenarios
 
-#### Scenario 1: Create a new branch with sandbox configuration
+#### Scenario 1: Test a PR from microsoft/BCApps (Most Common)
 ```
-PR number: 123
+PR number: 7145
+Fetch PR from upstream repo: ✅ checked (default)
 New branch name: (leave empty for default)
 Skip branch creation: false
 ```
-**Result**: Creates branch `pr-123-sandbox-publish` with modified launch.json and publishes apps
+**Result**:
+- Fetches PR #7145 from microsoft/BCApps
+- Creates branch `pr-7145-sandbox-publish` in your fork
+- Configures launch.json and publishes apps
+- Shows summary in workflow (can't comment on upstream PR)
 
-#### Scenario 2: Use custom branch name
+#### Scenario 2: Test a PR from your fork
+```
+PR number: 123
+Fetch PR from upstream repo: ⬜ unchecked
+New branch name: (leave empty for default)
+Skip branch creation: false
+```
+**Result**:
+- Fetches PR #123 from your fork
+- Creates branch `pr-123-sandbox-publish`
+- Configures launch.json and publishes apps
+- Posts comment on your PR
+
+#### Scenario 3: Use custom branch name
 ```
 PR number: 456
+Fetch PR from upstream repo: ✅ checked
 New branch name: feature/test-in-sandbox
 Skip branch creation: false
 ```
 **Result**: Creates branch `feature/test-in-sandbox` with configuration
 
-#### Scenario 3: Publish without creating a branch
+#### Scenario 4: Publish without creating a branch
 ```
 PR number: 789
+Fetch PR from upstream repo: ✅ checked
 New branch name: (not applicable)
 Skip branch creation: true
 ```
@@ -198,13 +221,20 @@ After the pipeline completes:
 
 The workflow will:
 
-1. **Post a comment on the PR** with:
+1. **Post a comment on the PR** (only when using your fork's PRs) with:
    - Environment details
    - Published apps list
    - Branch information
    - Instructions for using the configuration
+   - **Note**: When using upstream repo (microsoft/BCApps), workflow summary is created instead of PR comment
 
-2. **Create a commit** (if not skipping branch creation) with:
+2. **Create a workflow summary** (when using upstream repo) with:
+   - Source repository and PR details
+   - Environment configuration
+   - Published apps list
+   - Next steps
+
+3. **Create a commit** (if not skipping branch creation) with:
    - Modified launch.json files
    - Commit message detailing the configuration
 

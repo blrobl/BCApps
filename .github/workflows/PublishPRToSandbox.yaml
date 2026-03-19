@@ -7,6 +7,11 @@ on:
         description: 'Pull Request number'
         required: true
         type: number
+      use_upstream_repo:
+        description: 'Fetch PR from upstream repo (microsoft/BCApps)'
+        required: false
+        type: boolean
+        default: true
       branch_name:
         description: 'New branch name (optional, defaults to pr-<number>-sandbox-publish)'
         required: false
@@ -40,16 +45,24 @@ jobs:
             Write-Error "Invalid PR number: ${{ inputs.pr_number }}"
             exit 1
           }
-          Write-Host "Processing PR #${{ inputs.pr_number }}"
+
+          $repoSource = if ("${{ inputs.use_upstream_repo }}" -eq "true") { "microsoft/BCApps" } else { "${{ github.repository }}" }
+          Write-Host "Processing PR #${{ inputs.pr_number }} from $repoSource"
 
       - name: Get PR information
         id: pr_info
         uses: actions/github-script@v7
         with:
           script: |
+            const useUpstream = ${{ inputs.use_upstream_repo }};
+            const owner = useUpstream ? 'microsoft' : context.repo.owner;
+            const repo = useUpstream ? 'BCApps' : context.repo.repo;
+
+            console.log(`Fetching PR #${{ inputs.pr_number }} from ${owner}/${repo}`);
+
             const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: owner,
+              repo: repo,
               pull_number: ${{ inputs.pr_number }}
             });
 
@@ -57,14 +70,22 @@ jobs:
             core.setOutput('pr_sha', pr.data.head.sha);
             core.setOutput('pr_title', pr.data.title);
             core.setOutput('base_branch', pr.data.base.ref);
+            core.setOutput('pr_repo_owner', owner);
+            core.setOutput('pr_repo_name', repo);
+            core.setOutput('pr_repo_full', `${owner}/${repo}`);
+            core.setOutput('fork_owner', pr.data.head.repo.owner.login);
+            core.setOutput('fork_repo', pr.data.head.repo.name);
+            core.setOutput('clone_url', pr.data.head.repo.clone_url);
 
             console.log(`PR #${{ inputs.pr_number }}: ${pr.data.title}`);
             console.log(`Branch: ${pr.data.head.ref}`);
             console.log(`Base: ${pr.data.base.ref}`);
+            console.log(`Fork: ${pr.data.head.repo.owner.login}/${pr.data.head.repo.name}`);
 
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
+          repository: ${{ inputs.use_upstream_repo && format('{0}/{1}', steps.pr_info.outputs.fork_owner, steps.pr_info.outputs.fork_repo) || github.repository }}
           ref: ${{ steps.pr_info.outputs.pr_branch }}
           fetch-depth: 0
 
@@ -170,6 +191,7 @@ jobs:
           Write-Host "================================================" -ForegroundColor Green
           Write-Host ""
           Write-Host "Details:" -ForegroundColor Yellow
+          Write-Host "  Source: ${{ steps.pr_info.outputs.pr_repo_full }}" -ForegroundColor Gray
           Write-Host "  PR: #${{ inputs.pr_number }} - ${{ steps.pr_info.outputs.pr_title }}" -ForegroundColor Gray
 
           if ("${{ inputs.skip_branch_creation }}" -eq "true") {
@@ -186,7 +208,13 @@ jobs:
           Write-Host "  - Business Foundation" -ForegroundColor Gray
           Write-Host ""
 
-      - name: Comment on PR
+          if ("${{ inputs.use_upstream_repo }}" -eq "true") {
+            Write-Host "Note: PR was fetched from upstream repository (microsoft/BCApps)" -ForegroundColor Cyan
+            Write-Host "The branch has been created in your fork repository." -ForegroundColor Cyan
+          }
+
+      - name: Comment on PR (fork only)
+        if: ${{ !inputs.use_upstream_repo }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -228,3 +256,52 @@ jobs:
               issue_number: ${{ inputs.pr_number }},
               body: comment
             });
+
+      - name: Create workflow summary
+        if: ${{ inputs.use_upstream_repo }}
+        shell: pwsh
+        run: |
+          $branchName = if ("${{ inputs.skip_branch_creation }}" -eq "true") {
+            "${{ steps.pr_info.outputs.pr_branch }}"
+          } else {
+            "${{ steps.branch_name.outputs.name }}"
+          }
+
+          $summary = @"
+          ## 🚀 Published PR from microsoft/BCApps to Sandbox
+
+          Successfully published PR changes from the upstream repository to your sandbox environment!
+
+          ### Source PR
+          - **Repository**: ${{ steps.pr_info.outputs.pr_repo_full }}
+          - **PR Number**: #${{ inputs.pr_number }}
+          - **PR Title**: ${{ steps.pr_info.outputs.pr_title }}
+
+          ### Environment Details
+          - **Tenant ID**: $env:TENANT_ID
+          - **Environment**: $env:ENVIRONMENT_NAME
+          - **Country**: $env:COUNTRY
+
+          ### Apps Published
+          - ✅ System Application
+          - ✅ Business Foundation
+
+          ### Branch Created
+          $(if ("${{ inputs.skip_branch_creation }}" -eq "true") {
+            "Published directly from PR branch: ``$branchName``"
+          } else {
+            "Changes and configuration committed to: ``$branchName`` in your fork"
+          })
+
+          ### Next Steps
+          1. Checkout the branch: ``git checkout $branchName``
+          2. Open the workspace in VS Code
+          3. Press F5 to debug in the cloud sandbox
+
+          ### Note
+          Since this PR is from the upstream repository (microsoft/BCApps), a comment could not be posted on the original PR.
+          However, the configuration has been successfully created in your fork repository.
+          "@
+
+          echo $summary >> $env:GITHUB_STEP_SUMMARY
+          Write-Host $summary
