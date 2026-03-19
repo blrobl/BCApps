@@ -171,22 +171,26 @@ try {
     Write-Host "✓ Configuration Complete!" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Launch.json files configured in:" -ForegroundColor White
-    Write-Host "  ✓ $systemAppWorkspace\.vscode\launch.json" -ForegroundColor Gray
-    Write-Host "  ✓ $businessFoundationWorkspace\.vscode\launch.json" -ForegroundColor Gray
+    Write-Host "Launch.json files configured:" -ForegroundColor White
+    Write-Host "  ✓ src\System Application\.vscode\launch.json" -ForegroundColor Gray
+    Write-Host "  ✓ src\Business Foundation\.vscode\launch.json" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Environment configured:" -ForegroundColor White
     Write-Host "  • Tenant ID: $TenantId" -ForegroundColor Gray
     Write-Host "  • Environment: $EnvironmentName" -ForegroundColor Gray
     Write-Host "  • Country: $Country" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Next Steps:" -ForegroundColor Yellow
-    Write-Host "  1. Checkout the branch with the configured launch.json" -ForegroundColor Gray
+    Write-Host "Next Steps (on your local machine):" -ForegroundColor Yellow
+    Write-Host "  1. Fetch and checkout the configured branch:" -ForegroundColor Gray
+    Write-Host "     git fetch && git checkout <branch-name>" -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "  2. Open workspace in VS Code:" -ForegroundColor Gray
-    Write-Host "     - $systemAppWorkspace\SystemApplication.code-workspace" -ForegroundColor Gray
+    Write-Host "     code `"src\System Application\SystemApplication.code-workspace`"" -ForegroundColor Cyan
     Write-Host "     OR" -ForegroundColor Gray
-    Write-Host "     - $businessFoundationWorkspace\BusinessFoundation.code-workspace" -ForegroundColor Gray
+    Write-Host "     code `"src\Business Foundation\BusinessFoundation.code-workspace`"" -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "  3. Press F5 to publish and debug in the sandbox" -ForegroundColor Gray
+    Write-Host ""
     Write-Host "  4. Sign in with Microsoft Entra credentials when prompted" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Note: Apps are NOT automatically published by this pipeline." -ForegroundColor Cyan
