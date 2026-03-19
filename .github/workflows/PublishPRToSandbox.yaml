@@ -16,7 +16,7 @@ on:
         description: 'Use self-hosted runner (faster, requires setup)'
         required: false
         type: boolean
-        default: false
+        default: true
       branch_name:
         description: 'New branch name (optional, defaults to pr-<number>-sandbox-publish)'
         required: false
@@ -337,3 +337,34 @@ jobs:
 
           echo $summary >> $env:GITHUB_STEP_SUMMARY
           Write-Host $summary
+
+      - name: Cleanup on failure
+        if: ${{ failure() && !inputs.skip_branch_creation }}
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          $branchName = "${{ steps.branch_name.outputs.name }}"
+
+          Write-Host ""
+          Write-Host "============================================" -ForegroundColor Red
+          Write-Host "✗ Workflow Failed - Cleaning Up" -ForegroundColor Red
+          Write-Host "============================================" -ForegroundColor Red
+          Write-Host ""
+
+          # Check if branch was created
+          git fetch origin
+          $branchExists = git rev-parse --verify "origin/$branchName" 2>$null
+
+          if ($branchExists) {
+            Write-Host "Deleting failed branch: $branchName" -ForegroundColor Yellow
+
+            # Delete remote branch
+            git push origin --delete $branchName
+
+            Write-Host "✓ Branch deleted: $branchName" -ForegroundColor Green
+          } else {
+            Write-Host "Branch does not exist on remote, nothing to clean up" -ForegroundColor Gray
+          }
+
+          Write-Host ""
+          Write-Host "Note: Fix the errors and re-run the workflow" -ForegroundColor Cyan
