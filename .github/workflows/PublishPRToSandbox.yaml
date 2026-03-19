@@ -87,12 +87,22 @@ jobs:
             console.log(`Base: ${pr.data.base.ref}`);
             console.log(`Fork: ${pr.data.head.repo.owner.login}/${pr.data.head.repo.name}`);
 
+      - name: Checkout our repository (for scripts)
+        uses: actions/checkout@v4
+        with:
+          path: pipeline-scripts
+          sparse-checkout: |
+            .github/scripts
+            .github/workflows
+          sparse-checkout-cone-mode: false
+
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.use_upstream_repo && format('{0}/{1}', steps.pr_info.outputs.fork_owner, steps.pr_info.outputs.fork_repo) || github.repository }}
           ref: ${{ steps.pr_info.outputs.pr_branch }}
           fetch-depth: 0
+          path: pr-code
 
       - name: Determine branch name
         id: branch_name
@@ -112,6 +122,7 @@ jobs:
       - name: Create new branch
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
+        working-directory: pr-code
         run: |
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
@@ -130,6 +141,7 @@ jobs:
 
       - name: Configure Git
         shell: pwsh
+        working-directory: pr-code
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -149,18 +161,24 @@ jobs:
           Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
           Write-Host ""
 
-          # Execute the publish script
-          $scriptPath = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/PublishToSandbox.ps1"
+          # Execute the publish script from pipeline-scripts directory
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "pipeline-scripts\.github\scripts\PublishToSandbox.ps1"
+          $prCodePath = Join-Path $env:GITHUB_WORKSPACE "pr-code"
+
+          Write-Host "Script path: $scriptPath" -ForegroundColor Gray
+          Write-Host "PR code path: $prCodePath" -ForegroundColor Gray
+          Write-Host ""
 
           & $scriptPath `
             -TenantId $env:TENANT_ID `
             -EnvironmentName $env:ENVIRONMENT_NAME `
             -Country $env:COUNTRY `
-            -BaseFolder $env:GITHUB_WORKSPACE
+            -BaseFolder $prCodePath
 
       - name: Commit launch.json changes
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
+        working-directory: pr-code
         run: |
           # Check if there are changes to commit
           $changes = git status --porcelain
