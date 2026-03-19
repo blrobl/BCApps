@@ -260,6 +260,30 @@ jobs:
 
             Your PR has been configured for testing in the sandbox environment!
 
+            ### 🚀 Quick Start - Open in Codespaces
+
+            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}/tree/${branchName}?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json)
+
+            Click the button above to:
+            - ✅ Open pre-configured development environment
+            - ✅ AL extension already installed
+            - ✅ Launch.json ready for your sandbox
+            - ✅ Just press F5 to publish and debug!
+
+            ### 💻 Or Use Local VS Code
+
+            <details>
+            <summary>Click to expand local setup instructions</summary>
+
+            1. Checkout the branch: \`git checkout ${branchName}\`
+            2. Open workspace in VS Code:
+               - \`src/System Application/SystemApplication.code-workspace\` OR
+               - \`src/Business Foundation/BusinessFoundation.code-workspace\`
+            3. **Press F5** to publish and debug in the sandbox
+            4. Sign in with Microsoft Entra credentials when prompted
+
+            </details>
+
             ### Environment Details
             - **Tenant ID**: \`${{ env.TENANT_ID }}\`
             - **Environment**: \`${{ env.ENVIRONMENT_NAME }}\`
@@ -275,15 +299,7 @@ jobs:
               : `Configuration committed to: \`${branchName}\``
             }
 
-            ### How to Use
-            1. Checkout the branch: \`git checkout ${branchName}\`
-            2. Open workspace in VS Code:
-               - \`src/System Application/SystemApplication.code-workspace\` OR
-               - \`src/Business Foundation/BusinessFoundation.code-workspace\`
-            3. **Press F5** to publish and debug in the sandbox
-            4. Sign in with Microsoft Entra credentials when prompted
-
-            **Note:** Apps are NOT automatically published by this pipeline. Use F5 in VS Code to publish.
+            **Note:** Apps are NOT automatically published. Use Codespaces + F5 or local VS Code + F5 to publish.
 
             ---
             *Configured by GitHub Actions workflow*`;
@@ -305,10 +321,43 @@ jobs:
             "${{ steps.branch_name.outputs.name }}"
           }
 
+          $repoName = "${{ github.repository }}"
+          $codespacesUrl = "https://codespaces.new/$repoName/tree/$branchName?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json"
+
           $summary = @"
           ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
 
           Successfully configured PR from the upstream repository for testing in your sandbox environment!
+
+          ### 🚀 Quick Start - Open in Codespaces
+
+          [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]($codespacesUrl)
+
+          **Click the badge above to:**
+          - ✅ Open pre-configured development environment in the cloud
+          - ✅ AL extension already installed and ready
+          - ✅ Launch.json configured for your sandbox
+          - ✅ Just press F5 to publish and debug!
+
+          **No local setup needed!**
+
+          ---
+
+          ### 💻 Or Use Local VS Code
+
+          <details>
+          <summary>Click to expand local setup instructions</summary>
+
+          1. Checkout the branch: ``git fetch && git checkout $branchName``
+          2. Open workspace in VS Code:
+             - ``src/System Application/SystemApplication.code-workspace`` OR
+             - ``src/Business Foundation/BusinessFoundation.code-workspace``
+          3. **Press F5** to publish and debug in the sandbox
+          4. Sign in with Microsoft Entra credentials when prompted
+
+          </details>
+
+          ---
 
           ### Source PR
           - **Repository**: ${{ steps.pr_info.outputs.pr_repo_full }}
@@ -316,9 +365,9 @@ jobs:
           - **PR Title**: ${{ steps.pr_info.outputs.pr_title }}
 
           ### Environment Details
-          - **Tenant ID**: $env:TENANT_ID
-          - **Environment**: $env:ENVIRONMENT_NAME
-          - **Country**: $env:COUNTRY
+          - **Tenant ID**: ``$env:TENANT_ID``
+          - **Environment**: ``$env:ENVIRONMENT_NAME``
+          - **Country**: ``$env:COUNTRY``
 
           ### Launch.json Configured For
           - ✅ System Application
@@ -331,17 +380,9 @@ jobs:
             "Configuration committed to: ``$branchName`` in your fork"
           })
 
-          ### Next Steps
-          1. Checkout the branch: ``git checkout $branchName``
-          2. Open the workspace in VS Code:
-             - ``src/System Application/SystemApplication.code-workspace`` OR
-             - ``src/Business Foundation/BusinessFoundation.code-workspace``
-          3. **Press F5** to publish and debug in the cloud sandbox
-          4. Sign in with your Microsoft Entra credentials when prompted
-
           ### Note
           - Apps are **NOT automatically published** by this pipeline
-          - Use **F5 in VS Code** to publish apps to the configured environment
+          - Use **Codespaces + F5** or **local VS Code + F5** to publish apps
           - Since this PR is from the upstream repository (microsoft/BCApps), a comment could not be posted on the original PR
           - The configuration has been successfully created in your fork repository
           "@
