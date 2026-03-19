@@ -133,12 +133,17 @@ jobs:
           $remoteBranch = git ls-remote --heads origin $branchName
 
           if ($remoteBranch) {
-            Write-Host "Branch exists on remote. Deleting and recreating for clean state..." -ForegroundColor Yellow
-
-            # Delete remote branch
+            Write-Host "Branch exists on remote. Deleting..." -ForegroundColor Yellow
             git push origin --delete $branchName 2>$null
+            Write-Host "✓ Deleted remote branch" -ForegroundColor Gray
+          }
 
-            Write-Host "Deleted remote branch: $branchName" -ForegroundColor Gray
+          # Delete local branch if it exists (force delete)
+          $localBranch = git branch --list $branchName
+          if ($localBranch) {
+            Write-Host "Branch exists locally. Deleting..." -ForegroundColor Yellow
+            git branch -D $branchName 2>$null
+            Write-Host "✓ Deleted local branch" -ForegroundColor Gray
           }
 
           # Create fresh branch
