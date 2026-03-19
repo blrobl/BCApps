@@ -252,9 +252,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const branchName = "${{ inputs.skip_branch_creation }}" === "true"
-              ? "${{ steps.pr_info.outputs.pr_branch }}"
-              : "${{ steps.branch_name.outputs.name }}";
+            // Always use the workflow-created branch (where launch.json is configured)
+            const configuredBranch = "${{ steps.branch_name.outputs.name }}";
+            const prBranch = "${{ steps.pr_info.outputs.pr_branch }}";
+            const skipBranchCreation = "${{ inputs.skip_branch_creation }}" === "true";
+
+            // For display purposes
+            const branchName = skipBranchCreation ? prBranch : configuredBranch;
 
             const comment = `## ⚙️ Configured for Sandbox Environment
 
@@ -262,7 +266,7 @@ jobs:
 
             ### 🚀 Quick Start - Open in Codespaces
 
-            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}/tree/${branchName}?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json)
+            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}/tree/${configuredBranch}?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json)
 
             Click the button above to:
             - ✅ Open pre-configured development environment
@@ -315,14 +319,17 @@ jobs:
         if: ${{ inputs.use_upstream_repo }}
         shell: pwsh
         run: |
-          $branchName = if ("${{ inputs.skip_branch_creation }}" -eq "true") {
-            "${{ steps.pr_info.outputs.pr_branch }}"
-          } else {
-            "${{ steps.branch_name.outputs.name }}"
-          }
+          # Always use the workflow-created branch (where launch.json is configured)
+          $configuredBranch = "${{ steps.branch_name.outputs.name }}"
+          $prBranch = "${{ steps.pr_info.outputs.pr_branch }}"
+          $skipBranchCreation = "${{ inputs.skip_branch_creation }}" -eq "true"
+
+          # For display purposes
+          $branchName = if ($skipBranchCreation) { $prBranch } else { $configuredBranch }
 
           $repoName = "${{ github.repository }}"
-          $codespacesUrl = "https://codespaces.new/$repoName/tree/$branchName?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json"
+          # Codespaces URL always uses the configured branch
+          $codespacesUrl = "https://codespaces.new/$repoName/tree/$configuredBranch?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json"
 
           $summary = @"
           ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
