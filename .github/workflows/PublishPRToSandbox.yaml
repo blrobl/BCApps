@@ -146,13 +146,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Setup and publish to sandbox
+      - name: Configure launch.json for sandbox
         shell: pwsh
-        env:
-          ADMIN_CENTER_API_CREDENTIALS: ${{ secrets.ADMIN_CENTER_API_CREDENTIALS }}
         run: |
           Write-Host "================================================" -ForegroundColor Cyan
-          Write-Host "Publishing PR #${{ inputs.pr_number }} to Sandbox" -ForegroundColor Cyan
+          Write-Host "Configuring PR #${{ inputs.pr_number }} for Sandbox" -ForegroundColor Cyan
           Write-Host "================================================" -ForegroundColor Cyan
           Write-Host ""
           Write-Host "Environment Details:" -ForegroundColor Yellow
@@ -210,7 +208,7 @@ jobs:
         run: |
           Write-Host ""
           Write-Host "================================================" -ForegroundColor Green
-          Write-Host "✓ Publishing Complete!" -ForegroundColor Green
+          Write-Host "✓ Configuration Complete!" -ForegroundColor Green
           Write-Host "================================================" -ForegroundColor Green
           Write-Host ""
           Write-Host "Details:" -ForegroundColor Yellow
@@ -226,9 +224,11 @@ jobs:
           Write-Host "  Environment: $env:ENVIRONMENT_NAME" -ForegroundColor Gray
           Write-Host "  Tenant: $env:TENANT_ID" -ForegroundColor Gray
           Write-Host ""
-          Write-Host "Apps Published:" -ForegroundColor Yellow
-          Write-Host "  - System Application" -ForegroundColor Gray
-          Write-Host "  - Business Foundation" -ForegroundColor Gray
+          Write-Host "Launch.json configured for:" -ForegroundColor Yellow
+          Write-Host "  ✓ System Application" -ForegroundColor Gray
+          Write-Host "  ✓ Business Foundation" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Next: Press F5 in VS Code to publish & debug" -ForegroundColor Cyan
           Write-Host ""
 
           if ("${{ inputs.use_upstream_repo }}" -eq "true") {
@@ -245,33 +245,37 @@ jobs:
               ? "${{ steps.pr_info.outputs.pr_branch }}"
               : "${{ steps.branch_name.outputs.name }}";
 
-            const comment = `## 🚀 Published to Sandbox Environment
+            const comment = `## ⚙️ Configured for Sandbox Environment
 
-            Your PR changes have been successfully published to the sandbox environment!
+            Your PR has been configured for testing in the sandbox environment!
 
             ### Environment Details
             - **Tenant ID**: \`${{ env.TENANT_ID }}\`
             - **Environment**: \`${{ env.ENVIRONMENT_NAME }}\`
             - **Country**: \`${{ env.COUNTRY }}\`
 
-            ### Apps Published
+            ### Launch.json Configured For
             - ✅ System Application
             - ✅ Business Foundation
 
             ### Branch
             ${branchName === "${{ steps.pr_info.outputs.pr_branch }}"
-              ? `Published directly from PR branch: \`${branchName}\``
-              : `Changes and configuration committed to: \`${branchName}\``
+              ? `Configuration on PR branch: \`${branchName}\``
+              : `Configuration committed to: \`${branchName}\``
             }
 
-            ### VS Code Configuration
-            The launch.json files have been configured to connect to the sandbox environment. To use them:
+            ### How to Use
             1. Checkout the branch: \`git checkout ${branchName}\`
-            2. Open the workspace in VS Code
-            3. Use the Cloud Sandbox configuration in launch.json
+            2. Open workspace in VS Code:
+               - \`src/System Application/SystemApplication.code-workspace\` OR
+               - \`src/Business Foundation/BusinessFoundation.code-workspace\`
+            3. **Press F5** to publish and debug in the sandbox
+            4. Sign in with Microsoft Entra credentials when prompted
+
+            **Note:** Apps are NOT automatically published by this pipeline. Use F5 in VS Code to publish.
 
             ---
-            *Published by GitHub Actions workflow*`;
+            *Configured by GitHub Actions workflow*`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -291,9 +295,9 @@ jobs:
           }
 
           $summary = @"
-          ## 🚀 Published PR from microsoft/BCApps to Sandbox
+          ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
 
-          Successfully published PR changes from the upstream repository to your sandbox environment!
+          Successfully configured PR from the upstream repository for testing in your sandbox environment!
 
           ### Source PR
           - **Repository**: ${{ steps.pr_info.outputs.pr_repo_full }}
@@ -305,25 +309,30 @@ jobs:
           - **Environment**: $env:ENVIRONMENT_NAME
           - **Country**: $env:COUNTRY
 
-          ### Apps Published
+          ### Launch.json Configured For
           - ✅ System Application
           - ✅ Business Foundation
 
           ### Branch Created
           $(if ("${{ inputs.skip_branch_creation }}" -eq "true") {
-            "Published directly from PR branch: ``$branchName``"
+            "Configuration on PR branch: ``$branchName``"
           } else {
-            "Changes and configuration committed to: ``$branchName`` in your fork"
+            "Configuration committed to: ``$branchName`` in your fork"
           })
 
           ### Next Steps
           1. Checkout the branch: ``git checkout $branchName``
-          2. Open the workspace in VS Code
-          3. Press F5 to debug in the cloud sandbox
+          2. Open the workspace in VS Code:
+             - ``src/System Application/SystemApplication.code-workspace`` OR
+             - ``src/Business Foundation/BusinessFoundation.code-workspace``
+          3. **Press F5** to publish and debug in the cloud sandbox
+          4. Sign in with your Microsoft Entra credentials when prompted
 
           ### Note
-          Since this PR is from the upstream repository (microsoft/BCApps), a comment could not be posted on the original PR.
-          However, the configuration has been successfully created in your fork repository.
+          - Apps are **NOT automatically published** by this pipeline
+          - Use **F5 in VS Code** to publish apps to the configured environment
+          - Since this PR is from the upstream repository (microsoft/BCApps), a comment could not be posted on the original PR
+          - The configuration has been successfully created in your fork repository
           "@
 
           echo $summary >> $env:GITHUB_STEP_SUMMARY
