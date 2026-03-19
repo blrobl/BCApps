@@ -126,18 +126,24 @@ jobs:
         run: |
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
-          # Check if branch already exists
-          git fetch origin
-          $branchExists = git branch -r | Select-String "origin/$branchName"
+          Write-Host "Preparing branch: $branchName" -ForegroundColor Yellow
 
-          if ($branchExists) {
-            Write-Host "Branch $branchName already exists. Checking out..."
-            git checkout $branchName
-            git pull origin $branchName
-          } else {
-            Write-Host "Creating new branch: $branchName"
-            git checkout -b $branchName
+          # Check if branch exists on remote using ls-remote (more reliable)
+          git fetch origin
+          $remoteBranch = git ls-remote --heads origin $branchName
+
+          if ($remoteBranch) {
+            Write-Host "Branch exists on remote. Deleting and recreating for clean state..." -ForegroundColor Yellow
+
+            # Delete remote branch
+            git push origin --delete $branchName 2>$null
+
+            Write-Host "Deleted remote branch: $branchName" -ForegroundColor Gray
           }
+
+          # Create fresh branch
+          Write-Host "Creating new branch: $branchName" -ForegroundColor Green
+          git checkout -b $branchName
 
       - name: Configure Git
         shell: pwsh
