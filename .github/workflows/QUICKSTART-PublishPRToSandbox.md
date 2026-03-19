@@ -168,10 +168,18 @@ After your first successful run:
 
 Now that you have the pipeline working:
 
-1. **Customize**: Edit the script to publish additional apps
-2. **Automate**: Trigger the workflow automatically on PR labels
-3. **Extend**: Add testing steps after publishing
-4. **Share**: Let your team use the same pipeline!
+1. **Optimize**: Set up a self-hosted runner for 2-3x faster execution
+   - See [SELF-HOSTED-RUNNER-GUIDE.md](./SELF-HOSTED-RUNNER-GUIDE.md)
+   - 25 minutes setup time
+   - Saves ~2-3 minutes per run
+
+2. **Customize**: Edit the script to publish additional apps
+
+3. **Automate**: Trigger the workflow automatically on PR labels
+
+4. **Extend**: Add testing steps after publishing
+
+5. **Share**: Let your team use the same pipeline!
 
 ## Quick Reference
 

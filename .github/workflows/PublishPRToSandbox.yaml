@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      use_self_hosted_runner:
+        description: 'Use self-hosted runner (faster, requires setup)'
+        required: false
+        type: boolean
+        default: false
       branch_name:
         description: 'New branch name (optional, defaults to pr-<number>-sandbox-publish)'
         required: false
@@ -35,7 +40,7 @@ env:
 jobs:
   publish-to-sandbox:
     name: Publish PR Changes to Sandbox
-    runs-on: windows-latest
+    runs-on: ${{ inputs.use_self_hosted_runner && 'self-hosted' || 'windows-latest' }}
 
     steps:
       - name: Validate inputs

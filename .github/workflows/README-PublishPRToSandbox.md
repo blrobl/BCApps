@@ -109,6 +109,10 @@ env:
    - **Fetch PR from upstream repo (microsoft/BCApps)**:
      - ✅ **Checked (default)**: Fetches PR from microsoft/BCApps (recommended for testing upstream PRs)
      - ⬜ **Unchecked**: Fetches PR from your fork repository
+   - **Use self-hosted runner** (optional):
+     - ✅ **Checked**: Runs on your self-hosted runner (2-3x faster, requires setup)
+     - ⬜ **Unchecked (default)**: Runs on GitHub-hosted runner
+     - See [SELF-HOSTED-RUNNER-GUIDE.md](./SELF-HOSTED-RUNNER-GUIDE.md) for setup
    - **New branch name** (optional): Custom branch name (defaults to `pr-<number>-sandbox-publish`)
    - **Skip branch creation** (optional): Check this to publish directly from the PR branch without creating a new branch
 

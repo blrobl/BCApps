@@ -32,6 +32,13 @@ Template file for creating the `ADMIN_CENTER_API_CREDENTIALS` GitHub secret.
 
 ---
 
+### ⚡ I want faster pipeline execution
+→ **[SELF-HOSTED-RUNNER-GUIDE.md](./SELF-HOSTED-RUNNER-GUIDE.md)**
+
+Complete guide for setting up a self-hosted runner for 2-3x faster execution.
+
+---
+
 ### 💻 I want to see the code
 → **[PublishPRToSandbox.yaml](./PublishPRToSandbox.yaml)** - GitHub Actions workflow
 → **[../scripts/PublishToSandbox.ps1](../scripts/PublishToSandbox.ps1)** - PowerShell script
@@ -47,6 +54,7 @@ Template file for creating the `ADMIN_CENTER_API_CREDENTIALS` GitHub secret.
 | Run the pipeline | QUICKSTART → "Step 4" | 2 min |
 | Configure Azure AD app | QUICKSTART → "Step 1" | 5 min |
 | Set up GitHub secret | QUICKSTART → "Step 2" | 2 min |
+| Set up self-hosted runner (2-3x faster) | SELF-HOSTED-RUNNER-GUIDE | 25 min |
 | Troubleshoot authentication issues | README → "Troubleshooting" | 5 min |
 | Customize which apps are published | README → "Advanced Configuration" | 10 min |
 | Change environment settings | README → "Prerequisites → 2" | 2 min |
@@ -64,6 +72,7 @@ Template file for creating the `ADMIN_CENTER_API_CREDENTIALS` GitHub secret.
 │   ├── QUICKSTART-PublishPRToSandbox.md ← Start here
 │   ├── README-PublishPRToSandbox.md     ← Full documentation
 │   ├── PIPELINE-SUMMARY.md              ← Overview
+│   ├── SELF-HOSTED-RUNNER-GUIDE.md      ← Self-hosted setup
 │   └── credentials-template.json        ← Secret template
 └── scripts/
     └── PublishToSandbox.ps1              ← Main script
