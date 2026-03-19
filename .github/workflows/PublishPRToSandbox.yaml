@@ -1,0 +1,230 @@
+name: Publish PR to Sandbox Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request number'
+        required: true
+        type: number
+      branch_name:
+        description: 'New branch name (optional, defaults to pr-<number>-sandbox-publish)'
+        required: false
+        type: string
+      skip_branch_creation:
+        description: 'Skip creating a new branch (just use PR branch directly)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+env:
+  # Environment configuration
+  TENANT_ID: 'f0ac72d1-c1b3-4c2a-a196-8fb82cac5934'
+  ENVIRONMENT_NAME: 'a47676_p47575_US_29-0-cdsb'
+  COUNTRY: 'us'
+
+jobs:
+  publish-to-sandbox:
+    name: Publish PR Changes to Sandbox
+    runs-on: windows-latest
+
+    steps:
+      - name: Validate inputs
+        shell: pwsh
+        run: |
+          if (${{ inputs.pr_number }} -le 0) {
+            Write-Error "Invalid PR number: ${{ inputs.pr_number }}"
+            exit 1
+          }
+          Write-Host "Processing PR #${{ inputs.pr_number }}"
+
+      - name: Get PR information
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ inputs.pr_number }}
+            });
+
+            core.setOutput('pr_branch', pr.data.head.ref);
+            core.setOutput('pr_sha', pr.data.head.sha);
+            core.setOutput('pr_title', pr.data.title);
+            core.setOutput('base_branch', pr.data.base.ref);
+
+            console.log(`PR #${{ inputs.pr_number }}: ${pr.data.title}`);
+            console.log(`Branch: ${pr.data.head.ref}`);
+            console.log(`Base: ${pr.data.base.ref}`);
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr_info.outputs.pr_branch }}
+          fetch-depth: 0
+
+      - name: Determine branch name
+        id: branch_name
+        shell: pwsh
+        run: |
+          $branchName = "${{ inputs.branch_name }}"
+          if ([string]::IsNullOrWhiteSpace($branchName)) {
+            $branchName = "pr-${{ inputs.pr_number }}-sandbox-publish"
+          }
+
+          # Sanitize branch name
+          $branchName = $branchName -replace '[^a-zA-Z0-9\-_/]', '-'
+
+          Write-Host "Branch name: $branchName"
+          echo "name=$branchName" >> $env:GITHUB_OUTPUT
+
+      - name: Create new branch
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        run: |
+          $branchName = "${{ steps.branch_name.outputs.name }}"
+
+          # Check if branch already exists
+          git fetch origin
+          $branchExists = git branch -r | Select-String "origin/$branchName"
+
+          if ($branchExists) {
+            Write-Host "Branch $branchName already exists. Checking out..."
+            git checkout $branchName
+            git pull origin $branchName
+          } else {
+            Write-Host "Creating new branch: $branchName"
+            git checkout -b $branchName
+          }
+
+      - name: Configure Git
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup and publish to sandbox
+        shell: pwsh
+        env:
+          ADMIN_CENTER_API_CREDENTIALS: ${{ secrets.ADMIN_CENTER_API_CREDENTIALS }}
+        run: |
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host "Publishing PR #${{ inputs.pr_number }} to Sandbox" -ForegroundColor Cyan
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "Environment Details:" -ForegroundColor Yellow
+          Write-Host "  Tenant ID: $env:TENANT_ID" -ForegroundColor Gray
+          Write-Host "  Environment: $env:ENVIRONMENT_NAME" -ForegroundColor Gray
+          Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
+          Write-Host ""
+
+          # Execute the publish script
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/PublishToSandbox.ps1"
+
+          & $scriptPath `
+            -TenantId $env:TENANT_ID `
+            -EnvironmentName $env:ENVIRONMENT_NAME `
+            -Country $env:COUNTRY `
+            -BaseFolder $env:GITHUB_WORKSPACE
+
+      - name: Commit launch.json changes
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        run: |
+          # Check if there are changes to commit
+          $changes = git status --porcelain
+
+          if ($changes) {
+            Write-Host "Committing launch.json changes..."
+            git add -A
+
+            $commitMessage = @"
+          Configure launch.json for sandbox environment
+
+          - Tenant ID: $env:TENANT_ID
+          - Environment: $env:ENVIRONMENT_NAME
+          - Country: $env:COUNTRY
+
+          Source: PR #${{ inputs.pr_number }}
+          "@
+
+            git commit -m "$commitMessage"
+
+            Write-Host "Pushing changes to branch: ${{ steps.branch_name.outputs.name }}"
+            git push origin ${{ steps.branch_name.outputs.name }}
+          } else {
+            Write-Host "No changes to commit"
+          }
+
+      - name: Summary
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "================================================" -ForegroundColor Green
+          Write-Host "✓ Publishing Complete!" -ForegroundColor Green
+          Write-Host "================================================" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "Details:" -ForegroundColor Yellow
+          Write-Host "  PR: #${{ inputs.pr_number }} - ${{ steps.pr_info.outputs.pr_title }}" -ForegroundColor Gray
+
+          if ("${{ inputs.skip_branch_creation }}" -eq "true") {
+            Write-Host "  Branch: ${{ steps.pr_info.outputs.pr_branch }} (original PR branch)" -ForegroundColor Gray
+          } else {
+            Write-Host "  Branch: ${{ steps.branch_name.outputs.name }}" -ForegroundColor Gray
+          }
+
+          Write-Host "  Environment: $env:ENVIRONMENT_NAME" -ForegroundColor Gray
+          Write-Host "  Tenant: $env:TENANT_ID" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Apps Published:" -ForegroundColor Yellow
+          Write-Host "  - System Application" -ForegroundColor Gray
+          Write-Host "  - Business Foundation" -ForegroundColor Gray
+          Write-Host ""
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = "${{ inputs.skip_branch_creation }}" === "true"
+              ? "${{ steps.pr_info.outputs.pr_branch }}"
+              : "${{ steps.branch_name.outputs.name }}";
+
+            const comment = `## 🚀 Published to Sandbox Environment
+
+            Your PR changes have been successfully published to the sandbox environment!
+
+            ### Environment Details
+            - **Tenant ID**: \`${{ env.TENANT_ID }}\`
+            - **Environment**: \`${{ env.ENVIRONMENT_NAME }}\`
+            - **Country**: \`${{ env.COUNTRY }}\`
+
+            ### Apps Published
+            - ✅ System Application
+            - ✅ Business Foundation
+
+            ### Branch
+            ${branchName === "${{ steps.pr_info.outputs.pr_branch }}"
+              ? `Published directly from PR branch: \`${branchName}\``
+              : `Changes and configuration committed to: \`${branchName}\``
+            }
+
+            ### VS Code Configuration
+            The launch.json files have been configured to connect to the sandbox environment. To use them:
+            1. Checkout the branch: \`git checkout ${branchName}\`
+            2. Open the workspace in VS Code
+            3. Use the Cloud Sandbox configuration in launch.json
+
+            ---
+            *Published by GitHub Actions workflow*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ inputs.pr_number }},
+              body: comment
+            });
