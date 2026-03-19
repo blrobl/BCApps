@@ -217,9 +217,4 @@ catch {
 }
 finally {
     Pop-Location
-
-    # Cleanup temporary folder
-    if (Test-Path $tempFolder) {
-        Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
-    }
 }
