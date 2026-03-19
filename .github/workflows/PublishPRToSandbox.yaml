@@ -11,7 +11,7 @@ on:
         description: 'Fetch PR from upstream repo (microsoft/BCApps)'
         required: false
         type: boolean
-        default: true
+        default: false
       use_self_hosted_runner:
         description: 'Use self-hosted runner (faster, requires setup)'
         required: false
@@ -266,7 +266,7 @@ jobs:
 
             ### 🚀 Quick Start - Open in Codespaces
 
-            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}/tree/${configuredBranch}?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json)
+            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json)
 
             Click the button above to:
             - ✅ Open pre-configured development environment
@@ -329,7 +329,7 @@ jobs:
 
           $repoName = "${{ github.repository }}"
           # Codespaces URL always uses the configured branch
-          $codespacesUrl = "https://codespaces.new/$repoName/tree/$configuredBranch?devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json"
+          $codespacesUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/sandbox-publisher/devcontainer.json"
 
           $summary = @"
           ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
