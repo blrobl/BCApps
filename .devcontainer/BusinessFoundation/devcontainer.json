@@ -10,7 +10,8 @@
     "ghcr.io/devcontainers/features/node:1": {}
   },
   "postCreateCommand": "dotnet --version && pwsh -NoLogo -Command '$PSVersionTable';yarn install",
-  "workspaceFolder": "/workspaces/BCApps/src/BusinessFoundation.code-workspace",
+  "workspaceFolder": "/workspaces/BCApps",
+  "postStartCommand": "code /workspaces/BCApps/src/BusinessFoundation.code-workspace",
   "customizations": {
     "vscode": {
       "extensions": [
