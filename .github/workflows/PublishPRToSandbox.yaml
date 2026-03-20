@@ -87,18 +87,26 @@ jobs:
             console.log(`Base: ${pr.data.base.ref}`);
             console.log(`Fork: ${pr.data.head.repo.owner.login}/${pr.data.head.repo.name}`);
 
-      - name: Checkout our repository
+      - name: Checkout our repository (for scripts)
+        uses: actions/checkout@v4
+        with:
+          path: scripts
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout our repository (for PR code)
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          path: repo
+          path: pr-code
 
       - name: Fetch and create branch from PR
         id: branch_name
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
-        working-directory: repo
+        working-directory: pr-code
         run: |
           # Generate random branch name
           $randomId = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 6 | ForEach-Object {[char]$_})
@@ -136,7 +144,7 @@ jobs:
 
       - name: Configure Git
         shell: pwsh
-        working-directory: repo
+        working-directory: pr-code
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -154,24 +162,24 @@ jobs:
           Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
           Write-Host ""
 
-          # Execute the publish script
-          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "repo\.github\scripts\PublishToSandbox.ps1"
-          $repoPath = Join-Path $env:GITHUB_WORKSPACE "repo"
+          # Execute the publish script from scripts directory on pr-code directory
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "scripts\.github\scripts\PublishToSandbox.ps1"
+          $prCodePath = Join-Path $env:GITHUB_WORKSPACE "pr-code"
 
           Write-Host "Script path: $scriptPath" -ForegroundColor Gray
-          Write-Host "Repo path: $repoPath" -ForegroundColor Gray
+          Write-Host "PR code path: $prCodePath" -ForegroundColor Gray
           Write-Host ""
 
           & $scriptPath `
             -TenantId $env:TENANT_ID `
             -EnvironmentName $env:ENVIRONMENT_NAME `
             -Country $env:COUNTRY `
-            -BaseFolder $repoPath
+            -BaseFolder $prCodePath
 
       - name: Commit and push branch
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
-        working-directory: repo
+        working-directory: pr-code
         run: |
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
