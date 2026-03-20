@@ -139,6 +139,20 @@ jobs:
           Write-Host "✓ Branch created: $branchName" -ForegroundColor Green
           Write-Host ""
 
+          # Merge main to get latest devcontainer configs and other updates
+          Write-Host "Merging latest changes from main..." -ForegroundColor Yellow
+          git fetch origin main
+          git merge origin/main -m "Merge main to include latest devcontainer configs and workflow updates" --no-edit
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ Merge conflict detected!" -ForegroundColor Red
+            Write-Host "This PR has conflicts with main. Please resolve conflicts first." -ForegroundColor Yellow
+            throw "Failed to merge main into PR branch"
+          }
+
+          Write-Host "✓ Merged main successfully" -ForegroundColor Green
+          Write-Host ""
+
           # Save branch name for later steps
           echo "name=$branchName" >> $env:GITHUB_OUTPUT
 
