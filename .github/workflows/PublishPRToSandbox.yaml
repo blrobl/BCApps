@@ -244,10 +244,15 @@ jobs:
           Write-Host "  ✓ System Application" -ForegroundColor Gray
           Write-Host "  ✓ Business Foundation" -ForegroundColor Gray
           Write-Host ""
-          Write-Host "Codespaces URL:" -ForegroundColor Yellow
-          Write-Host "  https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/BCApps/devcontainer.json" -ForegroundColor Cyan
+          Write-Host "Codespaces URLs:" -ForegroundColor Yellow
+          Write-Host "  System Application:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json" -ForegroundColor Gray
+          Write-Host "  Business Foundation:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json" -ForegroundColor Gray
+          Write-Host "  Full Repository:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/BCApps/devcontainer.json" -ForegroundColor Gray
           Write-Host ""
-          Write-Host "Next: Click 'Open in Codespaces' or press F5 in local VS Code" -ForegroundColor Cyan
+          Write-Host "Next: Choose a Codespaces workspace above or use local VS Code + F5" -ForegroundColor Cyan
           Write-Host ""
 
           if ("${{ inputs.use_upstream_repo }}" -eq "true") {
@@ -274,10 +279,16 @@ jobs:
 
             ### 🚀 Quick Start - Open in Codespaces
 
-            [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BCApps/devcontainer.json)
+            Choose your workspace:
 
-            Click the button above to:
-            - ✅ Open pre-configured development environment
+            | Workspace | Open |
+            |-----------|------|
+            | **System Application** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json) |
+            | **Business Foundation** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json) |
+            | **Full Repository** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BCApps/devcontainer.json) |
+
+            Each environment includes:
+            - ✅ Pre-configured development environment
             - ✅ AL extension already installed
             - ✅ Launch.json ready for your sandbox
             - ✅ Just press F5 to publish and debug!
@@ -336,8 +347,10 @@ jobs:
           $branchName = if ($skipBranchCreation) { $prBranch } else { $configuredBranch }
 
           $repoName = "${{ github.repository }}"
-          # Codespaces URL always uses the configured branch
-          $codespacesUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/BCApps/devcontainer.json"
+          # Codespaces URLs for each workspace
+          $sysAppUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json"
+          $bizFoundUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json"
+          $fullRepoUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/BCApps/devcontainer.json"
 
           $summary = @"
           ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
@@ -346,10 +359,16 @@ jobs:
 
           ### 🚀 Quick Start - Open in Codespaces
 
-          [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]($codespacesUrl)
+          Choose your workspace:
 
-          **Click the badge above to:**
-          - ✅ Open pre-configured development environment in the cloud
+          | Workspace | Open |
+          |-----------|------|
+          | **System Application** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($sysAppUrl) |
+          | **Business Foundation** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($bizFoundUrl) |
+          | **Full Repository** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($fullRepoUrl) |
+
+          Each environment includes:
+          - ✅ Pre-configured development environment in the cloud
           - ✅ AL extension already installed and ready
           - ✅ Launch.json configured for your sandbox
           - ✅ Just press F5 to publish and debug!
