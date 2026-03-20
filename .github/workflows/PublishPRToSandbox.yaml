@@ -301,11 +301,15 @@ jobs:
             | **Business Foundation** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json) |
             | **Full Repository** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BCApps/devcontainer.json) |
 
+            **After Codespace starts:**
+            1. Click on the workspace file in the Explorer (e.g., \`src/SystemApplication.code-workspace\`)
+            2. VS Code will reload with the multi-folder workspace
+            3. Press F5 to publish and debug!
+
             Each environment includes:
             - ✅ Pre-configured development environment
             - ✅ AL extension already installed
             - ✅ Launch.json ready for your sandbox
-            - ✅ Just press F5 to publish and debug!
 
             ### 💻 Or Use Local VS Code
 

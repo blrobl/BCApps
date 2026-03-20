@@ -9,8 +9,8 @@
     "ghcr.io/devcontainers-contrib/features/jshint:2": {},
     "ghcr.io/devcontainers/features/node:1": {}
   },
-  "postCreateCommand": "dotnet --version && pwsh -NoLogo -Command '$PSVersionTable';yarn install",
-  "workspaceFolder": "/workspaces/BCApps/src/SystemApplication.code-workspace",
+  "postCreateCommand": "dotnet --version && pwsh -NoLogo -Command '$PSVersionTable';yarn install && echo '\n\n⚠️  To open the System Application workspace, click: src/SystemApplication.code-workspace\n'",
+  "workspaceFolder": "/workspaces/BCApps",
   "customizations": {
     "vscode": {
       "extensions": [
