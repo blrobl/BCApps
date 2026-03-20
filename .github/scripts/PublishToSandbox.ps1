@@ -128,38 +128,38 @@ try {
 
     Push-Location $BaseFolder
 
-    # Workspace paths
-    $systemAppWorkspace = Join-Path $BaseFolder "src\System Application"
-    $businessFoundationWorkspace = Join-Path $BaseFolder "src\Business Foundation"
+    # AL Project paths (where launch.json should be created)
+    $systemAppProject = Join-Path $BaseFolder "src\System Application\App"
+    $businessFoundationProject = Join-Path $BaseFolder "src\Business Foundation\App"
 
-    Write-Host "Configuring VSCode workspaces..." -ForegroundColor Yellow
+    Write-Host "Configuring AL project launch.json files..." -ForegroundColor Yellow
     Write-Host ""
 
-    # Configure launch.json for System Application
-    Write-Host "System Application:" -ForegroundColor White
-    if (Test-Path $systemAppWorkspace) {
+    # Configure launch.json for System Application App
+    Write-Host "System Application App:" -ForegroundColor White
+    if (Test-Path $systemAppProject) {
         New-CloudSandboxLaunchConfig `
-            -WorkspacePath $systemAppWorkspace `
+            -WorkspacePath $systemAppProject `
             -ConfigName "Cloud Sandbox ($EnvironmentName)" `
             -TenantId $TenantId `
             -EnvironmentName $EnvironmentName
     }
     else {
-        Write-Host "  Warning: System Application workspace not found at $systemAppWorkspace" -ForegroundColor Yellow
+        Write-Host "  Warning: System Application App project not found at $systemAppProject" -ForegroundColor Yellow
     }
     Write-Host ""
 
-    # Configure launch.json for Business Foundation
-    Write-Host "Business Foundation:" -ForegroundColor White
-    if (Test-Path $businessFoundationWorkspace) {
+    # Configure launch.json for Business Foundation App
+    Write-Host "Business Foundation App:" -ForegroundColor White
+    if (Test-Path $businessFoundationProject) {
         New-CloudSandboxLaunchConfig `
-            -WorkspacePath $businessFoundationWorkspace `
+            -WorkspacePath $businessFoundationProject `
             -ConfigName "Cloud Sandbox ($EnvironmentName)" `
             -TenantId $TenantId `
             -EnvironmentName $EnvironmentName
     }
     else {
-        Write-Host "  Warning: Business Foundation workspace not found at $businessFoundationWorkspace" -ForegroundColor Yellow
+        Write-Host "  Warning: Business Foundation App project not found at $businessFoundationProject" -ForegroundColor Yellow
     }
     Write-Host ""
 
@@ -172,8 +172,8 @@ try {
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
     Write-Host "Launch.json files configured:" -ForegroundColor White
-    Write-Host "  ✓ src\System Application\.vscode\launch.json" -ForegroundColor Gray
-    Write-Host "  ✓ src\Business Foundation\.vscode\launch.json" -ForegroundColor Gray
+    Write-Host "  ✓ src\System Application\App\.vscode\launch.json" -ForegroundColor Gray
+    Write-Host "  ✓ src\Business Foundation\App\.vscode\launch.json" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Environment configured:" -ForegroundColor White
     Write-Host "  • Tenant ID: $TenantId" -ForegroundColor Gray
