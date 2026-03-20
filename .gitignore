@@ -330,3 +330,4 @@ TestResults.xml
 
 # Exceptions
 !src/System Application/Test/Extension Management/testArtifacts/*.app
+.sandbox-config.json

@@ -163,11 +163,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Configure launch.json for sandbox
+      - name: Create sandbox configuration file
         shell: pwsh
+        working-directory: pr-code
         run: |
           Write-Host "================================================" -ForegroundColor Cyan
-          Write-Host "Configuring PR #${{ inputs.pr_number }} for Sandbox" -ForegroundColor Cyan
+          Write-Host "Creating Sandbox Configuration" -ForegroundColor Cyan
           Write-Host "================================================" -ForegroundColor Cyan
           Write-Host ""
           Write-Host "Environment Details:" -ForegroundColor Yellow
@@ -176,19 +177,20 @@ jobs:
           Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
           Write-Host ""
 
-          # Execute the publish script from scripts directory on pr-code directory
-          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "scripts\.github\scripts\PublishToSandbox.ps1"
-          $prCodePath = Join-Path $env:GITHUB_WORKSPACE "pr-code"
+          # Create configuration file that Codespace will use
+          $config = @{
+            tenantId = $env:TENANT_ID
+            environmentName = $env:ENVIRONMENT_NAME
+            country = $env:COUNTRY
+            prNumber = "${{ inputs.pr_number }}"
+          }
 
-          Write-Host "Script path: $scriptPath" -ForegroundColor Gray
-          Write-Host "PR code path: $prCodePath" -ForegroundColor Gray
+          $configJson = $config | ConvertTo-Json
+          $configJson | Out-File -FilePath ".sandbox-config.json" -Encoding utf8
+
+          Write-Host "✓ Created .sandbox-config.json" -ForegroundColor Green
+          Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
-
-          & $scriptPath `
-            -TenantId $env:TENANT_ID `
-            -EnvironmentName $env:ENVIRONMENT_NAME `
-            -Country $env:COUNTRY `
-            -BaseFolder $prCodePath
 
       - name: Commit and push branch
         if: ${{ !inputs.skip_branch_creation }}
@@ -197,30 +199,22 @@ jobs:
         run: |
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
-          # Check if there are changes to commit
-          $changes = git status --porcelain
+          Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
+          git add .sandbox-config.json
 
-          if ($changes) {
-            Write-Host "Committing launch.json changes..." -ForegroundColor Yellow
-            git add -A
-
-            $commitMessage = @"
-          Configure launch.json for sandbox environment
+          $commitMessage = @"
+          Add sandbox configuration for Codespaces
 
           - Tenant ID: $env:TENANT_ID
           - Environment: $env:ENVIRONMENT_NAME
           - Country: $env:COUNTRY
 
+          Launch.json will be auto-configured when Codespace starts.
           Source: PR #${{ inputs.pr_number }}
           "@
 
-            git commit -m "$commitMessage"
-            Write-Host "✓ Changes committed" -ForegroundColor Green
-          } else {
-            Write-Host "No changes detected - creating empty commit" -ForegroundColor Yellow
-            git commit --allow-empty -m "Create sandbox branch for PR #${{ inputs.pr_number }}"
-            Write-Host "✓ Empty commit created" -ForegroundColor Green
-          }
+          git commit -m "$commitMessage"
+          Write-Host "✓ Configuration committed" -ForegroundColor Green
 
           Write-Host "Pushing branch to ${{ github.repository }}..." -ForegroundColor Yellow
           git push -u origin $branchName
