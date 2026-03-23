@@ -186,9 +186,12 @@ jobs:
           }
 
           $configJson = $config | ConvertTo-Json
-          $configJson | Out-File -FilePath ".sandbox-config.json" -Encoding utf8
 
-          Write-Host "✓ Created .sandbox-config.json" -ForegroundColor Green
+          # Create config in both component folders so it's accessible regardless of which Codespace is opened
+          $configJson | Out-File -FilePath "src/System Application/.sandbox-config.json" -Encoding utf8
+          $configJson | Out-File -FilePath "src/Business Foundation/.sandbox-config.json" -Encoding utf8
+
+          Write-Host "✓ Created .sandbox-config.json in component folders" -ForegroundColor Green
           Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
 
@@ -200,7 +203,7 @@ jobs:
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
           Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
-          git add .sandbox-config.json
+          git add "src/System Application/.sandbox-config.json" "src/Business Foundation/.sandbox-config.json"
 
           $commitMessage = @"
           Add sandbox configuration for Codespaces

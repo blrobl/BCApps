@@ -6,8 +6,8 @@ Write-Host "Configuring Sandbox Environment" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if sandbox config exists
-$configPath = "/workspaces/BCApps/.sandbox-config.json"
+# Check if sandbox config exists (in the current workspace folder)
+$configPath = ".sandbox-config.json"
 if (-not (Test-Path $configPath)) {
     Write-Host "⚠️  No sandbox configuration found" -ForegroundColor Yellow
     Write-Host "This branch wasn't created by the sandbox workflow." -ForegroundColor Gray
@@ -26,8 +26,8 @@ Write-Host "  Country: $($config.country)" -ForegroundColor Gray
 Write-Host "  PR Number: $($config.prNumber)" -ForegroundColor Gray
 Write-Host ""
 
-# Run the configuration script
-$scriptPath = "/workspaces/BCApps/.github/scripts/PublishToSandbox.ps1"
+# Run the configuration script (relative to workspace folder)
+$scriptPath = "../../.github/scripts/PublishToSandbox.ps1"
 if (-not (Test-Path $scriptPath)) {
     Write-Host "✗ Configuration script not found: $scriptPath" -ForegroundColor Red
     exit 1
@@ -38,7 +38,7 @@ Write-Host "Configuring launch.json files..." -ForegroundColor Yellow
     -TenantId $config.tenantId `
     -EnvironmentName $config.environmentName `
     -Country $config.country `
-    -BaseFolder "/workspaces/BCApps"
+    -BaseFolder "../.."
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
