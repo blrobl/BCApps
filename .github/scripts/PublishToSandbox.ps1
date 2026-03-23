@@ -2,18 +2,6 @@
 <#
 .SYNOPSIS
     Creates launch.json files for BC SaaS Sandbox in all AL projects.
-
-.PARAMETER TenantId
-    The Microsoft Entra tenant ID.
-
-.PARAMETER EnvironmentName
-    The BC SaaS sandbox environment name.
-
-.PARAMETER Country
-    The country code (e.g., 'us').
-
-.PARAMETER BaseFolder
-    The repository root folder.
 #>
 
 param(
@@ -32,6 +20,51 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function New-LaunchJson {
+    param(
+        [string] $ProjectFolder,
+        [string] $TenantId,
+        [string] $EnvironmentName
+    )
+
+    Write-Host "  Configuring: $ProjectFolder" -ForegroundColor Gray
+
+    $vscodePath = Join-Path $ProjectFolder ".vscode"
+    $launchPath = Join-Path $vscodePath "launch.json"
+
+    # Create .vscode folder
+    if (!(Test-Path $vscodePath)) {
+        New-Item -Path $vscodePath -ItemType Directory -Force | Out-Null
+        Write-Host "    Created .vscode folder" -ForegroundColor DarkGray
+    }
+
+    # Create launch.json
+    $launchConfig = @{
+        "version" = "0.2.0"
+        "configurations" = @(
+            @{
+                "type" = "al"
+                "request" = "launch"
+                "name" = "Cloud Sandbox ($EnvironmentName)"
+                "environmentType" = "Sandbox"
+                "environmentName" = $EnvironmentName
+                "tenant" = $TenantId
+                "authentication" = "AAD"
+                "startupObjectType" = "Page"
+                "startupObjectId" = 22
+                "schemaUpdateMode" = "Synchronize"
+                "breakOnError" = $true
+                "launchBrowser" = $true
+                "enableLongRunningSqlStatements" = $true
+                "enableSqlInformationDebugger" = $true
+            }
+        )
+    }
+
+    $launchConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $launchPath -Force
+    Write-Host "    ✓ Created launch.json" -ForegroundColor Green
+}
+
 try {
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Cyan
@@ -44,59 +77,50 @@ try {
 
     Push-Location $BaseFolder
 
-    # Import AL Dev utilities
-    $alDevModule = Join-Path $BaseFolder "build\scripts\DevEnv\ALDev.psm1"
-    Import-Module $alDevModule -DisableNameChecking -Force -ErrorAction Stop
+    # Find all AL projects in System Application and Business Foundation
+    $folders = @("src/System Application", "src/Business Foundation")
 
-    # Cloud Sandbox launch settings
-    $launchSettings = @{
-        "type" = "al"
-        "request" = "launch"
-        "name" = "Cloud Sandbox ($EnvironmentName)"
-        "environmentType" = "Sandbox"
-        "environmentName" = $EnvironmentName
-        "tenant" = $TenantId
-        "authentication" = "AAD"
-        "startupObjectType" = "Page"
-        "startupObjectId" = 22
-        "schemaUpdateMode" = "Synchronize"
-        "breakOnError" = $true
-        "launchBrowser" = $true
-        "enableLongRunningSqlStatements" = $true
-        "enableSqlInformationDebugger" = $true
+    foreach ($folder in $folders) {
+        $fullPath = Join-Path $BaseFolder $folder
+        if (!(Test-Path $fullPath)) {
+            Write-Host "⚠ Folder not found: $folder" -ForegroundColor Yellow
+            continue
+        }
+
+        Write-Host "Searching for AL projects in: $folder" -ForegroundColor White
+
+        # Find all folders with app.json (AL projects)
+        $projects = Get-ChildItem -Path $fullPath -Recurse -File -Filter "app.json" |
+            ForEach-Object { $_.Directory.FullName }
+
+        if ($projects.Count -eq 0) {
+            Write-Host "  No AL projects found" -ForegroundColor Yellow
+        }
+
+        foreach ($project in $projects) {
+            New-LaunchJson -ProjectFolder $project -TenantId $TenantId -EnvironmentName $EnvironmentName
+        }
+
+        Write-Host ""
     }
-
-    # Configure System Application
-    Write-Host "Configuring System Application projects..." -ForegroundColor White
-    Configure-ALProjectsInPath -Path (Join-Path $BaseFolder "src/System Application") -LaunchSettings $launchSettings -ProjectSettings @{}
-    Write-Host ""
-
-    # Configure Business Foundation
-    Write-Host "Configuring Business Foundation projects..." -ForegroundColor White
-    Configure-ALProjectsInPath -Path (Join-Path $BaseFolder "src/Business Foundation") -LaunchSettings $launchSettings -ProjectSettings @{}
-    Write-Host ""
 
     Write-Host "============================================" -ForegroundColor Green
     Write-Host "✓ Configuration Complete!" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Press F5 in any AL project to publish!" -ForegroundColor Cyan
-    Write-Host ""
 
-    # Explicitly exit with success
     exit 0
 }
 catch {
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Red
-    Write-Host "✗ Error occurred" -ForegroundColor Red
+    Write-Host "✗ Error: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "============================================" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Stack: $($_.ScriptStackTrace)" -ForegroundColor Yellow
+    Write-Host "Stack trace:" -ForegroundColor Yellow
+    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     Write-Host ""
 
-    # Explicitly exit with error
     exit 1
 }
 finally {
