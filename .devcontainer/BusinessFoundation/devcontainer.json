@@ -10,7 +10,7 @@
     "ghcr.io/devcontainers/features/node:1": {}
   },
   "postCreateCommand": "pwsh -NoLogo -File .devcontainer/BusinessFoundation/configure-sandbox.ps1",
-  "workspaceFolder": "/workspaces/BCApps/src/Business Foundation",
+  "workspaceFolder": "/workspaces/BCApps",
   "customizations": {
     "vscode": {
       "extensions": [
