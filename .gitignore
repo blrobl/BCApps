@@ -289,37 +289,6 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 
-### AL ###
-#Template for AL projects for Dynamics 365 Business Central
-#launch.json folder
-.vscode/
-#Cache folder
-.alcache/
-#Symbols folder
-.alpackages/
-#.NET packages
-.netpackages/
-#Snapshots folder
-.snapshots/
-#Testing Output folder
-.output/
-#Extension App-file
-*.app
-#Rapid Application Development File
-rad.json
-#Translation Base-file
-*.g.xlf
-#License-files
-*.bclicense
-*.flf
-#Test results file
-TestResults.xml
-#Translation files
-*.xlf
-*.lcg
-#Build files
-*.al.bak
-
 # Jupyter Notebook
 *.ipynb_checkpoints
 *.ipynb
