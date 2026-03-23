@@ -163,7 +163,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create sandbox configuration file
+      - name: Create sandbox configuration scripts
         shell: pwsh
         working-directory: pr-code
         run: |
@@ -177,21 +177,23 @@ jobs:
           Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
           Write-Host ""
 
-          # Create configuration file that Codespace will use
-          $config = @{
-            tenantId = $env:TENANT_ID
-            environmentName = $env:ENVIRONMENT_NAME
-            country = $env:COUNTRY
-            prNumber = "${{ inputs.pr_number }}"
-          }
+          # Create PowerShell scripts with config values for each component
+          $configScript = @"
+          # Auto-generated sandbox configuration
+          # Tenant: $env:TENANT_ID
+          # Environment: $env:ENVIRONMENT_NAME
+          # PR: #${{ inputs.pr_number }}
 
-          $configJson = $config | ConvertTo-Json
+          `$tenantId = "$env:TENANT_ID"
+          `$environmentName = "$env:ENVIRONMENT_NAME"
+          `$country = "$env:COUNTRY"
+          `$prNumber = "${{ inputs.pr_number }}"
+          "@
 
-          # Create config in both component folders so it's accessible regardless of which Codespace is opened
-          $configJson | Out-File -FilePath "src/System Application/.sandbox-config.json" -Encoding utf8
-          $configJson | Out-File -FilePath "src/Business Foundation/.sandbox-config.json" -Encoding utf8
+          $configScript | Out-File -FilePath "src/System Application/sandbox-config.ps1" -Encoding utf8
+          $configScript | Out-File -FilePath "src/Business Foundation/sandbox-config.ps1" -Encoding utf8
 
-          Write-Host "✓ Created .sandbox-config.json in component folders" -ForegroundColor Green
+          Write-Host "✓ Created sandbox-config.ps1 in component folders" -ForegroundColor Green
           Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
 
@@ -203,7 +205,7 @@ jobs:
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
           Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
-          git add "src/System Application/.sandbox-config.json" "src/Business Foundation/.sandbox-config.json"
+          git add "src/System Application/sandbox-config.ps1" "src/Business Foundation/sandbox-config.ps1"
 
           $commitMessage = @"
           Add sandbox configuration for Codespaces

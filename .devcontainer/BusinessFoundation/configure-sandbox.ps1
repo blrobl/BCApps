@@ -6,8 +6,8 @@ Write-Host "Configuring Sandbox Environment" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if sandbox config exists (in the current workspace folder)
-$configPath = ".sandbox-config.json"
+# Check if sandbox config script exists
+$configPath = "./sandbox-config.ps1"
 if (-not (Test-Path $configPath)) {
     Write-Host "⚠️  No sandbox configuration found" -ForegroundColor Yellow
     Write-Host "This branch wasn't created by the sandbox workflow." -ForegroundColor Gray
@@ -15,15 +15,15 @@ if (-not (Test-Path $configPath)) {
     exit 0
 }
 
-# Read configuration
-Write-Host "Reading sandbox configuration..." -ForegroundColor Gray
-$config = Get-Content $configPath | ConvertFrom-Json
+# Load configuration variables
+Write-Host "Loading sandbox configuration..." -ForegroundColor Gray
+. $configPath
 
 Write-Host "Environment Details:" -ForegroundColor Yellow
-Write-Host "  Tenant ID: $($config.tenantId)" -ForegroundColor Gray
-Write-Host "  Environment: $($config.environmentName)" -ForegroundColor Gray
-Write-Host "  Country: $($config.country)" -ForegroundColor Gray
-Write-Host "  PR Number: $($config.prNumber)" -ForegroundColor Gray
+Write-Host "  Tenant ID: $tenantId" -ForegroundColor Gray
+Write-Host "  Environment: $environmentName" -ForegroundColor Gray
+Write-Host "  Country: $country" -ForegroundColor Gray
+Write-Host "  PR Number: $prNumber" -ForegroundColor Gray
 Write-Host ""
 
 # Run the configuration script (relative to workspace folder)
@@ -35,9 +35,9 @@ if (-not (Test-Path $scriptPath)) {
 
 Write-Host "Configuring launch.json files..." -ForegroundColor Yellow
 & $scriptPath `
-    -TenantId $config.tenantId `
-    -EnvironmentName $config.environmentName `
-    -Country $config.country `
+    -TenantId $tenantId `
+    -EnvironmentName $environmentName `
+    -Country $country `
     -BaseFolder "../.."
 
 if ($LASTEXITCODE -eq 0) {
