@@ -1,0 +1,36 @@
+{
+  "name": "BC Sandbox Publisher",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "features": {
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dynamics-smb.al"
+      ],
+      "settings": {
+        "al.enableCodeAnalysis": true,
+        "al.codeAnalyzers": [
+          "${CodeCop}",
+          "${UICop}",
+          "${PerTenantExtensionCop}"
+        ],
+        "files.autoSave": "afterDelay"
+      }
+    }
+  },
+
+  // Run setup after Codespaces creates
+  "postCreateCommand": "bash .devcontainer/sandbox-publisher/post-create.sh",
+
+  // Open System Application workspace by default
+  "workspaceFolder": "/workspaces/BCApps",
+
+  "remoteUser": "vscode"
+}
