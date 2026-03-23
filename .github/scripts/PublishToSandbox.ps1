@@ -55,9 +55,6 @@ try {
         "environmentType" = "Sandbox"
         "environmentName" = $EnvironmentName
         "tenant" = $TenantId
-        "authentication" = "AAD"
-        "startupObjectType" = "Page"
-        "startupObjectId" = 22
         "schemaUpdateMode" = "Synchronize"
         "breakOnError" = $true
         "launchBrowser" = $true
