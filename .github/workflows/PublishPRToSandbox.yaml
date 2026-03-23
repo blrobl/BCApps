@@ -163,12 +163,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create sandbox configuration scripts
+      - name: Configure sandbox scripts with environment values
         shell: pwsh
         working-directory: pr-code
         run: |
           Write-Host "================================================" -ForegroundColor Cyan
-          Write-Host "Creating Sandbox Configuration" -ForegroundColor Cyan
+          Write-Host "Configuring Sandbox Scripts" -ForegroundColor Cyan
           Write-Host "================================================" -ForegroundColor Cyan
           Write-Host ""
           Write-Host "Environment Details:" -ForegroundColor Yellow
@@ -177,23 +177,20 @@ jobs:
           Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
           Write-Host ""
 
-          # Create PowerShell scripts with config values for each component
-          $configScript = @"
-          # Auto-generated sandbox configuration
-          # Tenant: $env:TENANT_ID
-          # Environment: $env:ENVIRONMENT_NAME
-          # PR: #${{ inputs.pr_number }}
+          # Replace placeholders in configure-sandbox.ps1 files
+          $sysAppScript = ".devcontainer/SystemApplication/configure-sandbox.ps1"
+          $bizFoundScript = ".devcontainer/BusinessFoundation/configure-sandbox.ps1"
 
-          `$tenantId = "$env:TENANT_ID"
-          `$environmentName = "$env:ENVIRONMENT_NAME"
-          `$country = "$env:COUNTRY"
-          `$prNumber = "${{ inputs.pr_number }}"
-          "@
+          foreach ($scriptPath in @($sysAppScript, $bizFoundScript)) {
+            $content = Get-Content $scriptPath -Raw
+            $content = $content -replace '\{\{TENANT_ID\}\}', $env:TENANT_ID
+            $content = $content -replace '\{\{ENVIRONMENT_NAME\}\}', $env:ENVIRONMENT_NAME
+            $content = $content -replace '\{\{COUNTRY\}\}', $env:COUNTRY
+            $content = $content -replace '\{\{PR_NUMBER\}\}', "${{ inputs.pr_number }}"
+            Set-Content -Path $scriptPath -Value $content -NoNewline
+          }
 
-          $configScript | Out-File -FilePath "src/System Application/sandbox-config.ps1" -Encoding utf8
-          $configScript | Out-File -FilePath "src/Business Foundation/sandbox-config.ps1" -Encoding utf8
-
-          Write-Host "✓ Created sandbox-config.ps1 in component folders" -ForegroundColor Green
+          Write-Host "✓ Configured sandbox scripts with environment values" -ForegroundColor Green
           Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
 
@@ -205,7 +202,7 @@ jobs:
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
           Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
-          git add "src/System Application/sandbox-config.ps1" "src/Business Foundation/sandbox-config.ps1"
+          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1"
 
           $commitMessage = @"
           Add sandbox configuration for Codespaces
