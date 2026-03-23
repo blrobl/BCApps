@@ -1,0 +1,437 @@
+name: Publish PR to Sandbox Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request number'
+        required: true
+        type: number
+      use_upstream_repo:
+        description: 'Fetch PR from upstream repo (microsoft/BCApps)'
+        required: false
+        type: boolean
+        default: false
+      use_self_hosted_runner:
+        description: 'Use self-hosted runner (faster, requires setup)'
+        required: false
+        type: boolean
+        default: true
+      branch_name:
+        description: 'New branch name (optional, defaults to pr-<number>-sandbox-publish)'
+        required: false
+        type: string
+      skip_branch_creation:
+        description: 'Skip creating a new branch (just use PR branch directly)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # Environment configuration
+  TENANT_ID: 'f0ac72d1-c1b3-4c2a-a196-8fb82cac5934'
+  ENVIRONMENT_NAME: 'a47676_p47575_US_29-0-cdsb'
+  COUNTRY: 'us'
+
+jobs:
+  publish-to-sandbox:
+    name: Publish PR Changes to Sandbox
+    runs-on: ${{ inputs.use_self_hosted_runner && 'self-hosted' || 'windows-latest' }}
+
+    steps:
+      - name: Validate inputs
+        shell: pwsh
+        run: |
+          if (${{ inputs.pr_number }} -le 0) {
+            Write-Error "Invalid PR number: ${{ inputs.pr_number }}"
+            exit 1
+          }
+
+          $repoSource = if ("${{ inputs.use_upstream_repo }}" -eq "true") { "microsoft/BCApps" } else { "${{ github.repository }}" }
+          Write-Host "Processing PR #${{ inputs.pr_number }} from $repoSource"
+
+      - name: Get PR information
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const useUpstream = ${{ inputs.use_upstream_repo }};
+            const owner = useUpstream ? 'microsoft' : context.repo.owner;
+            const repo = useUpstream ? 'BCApps' : context.repo.repo;
+
+            console.log(`Fetching PR #${{ inputs.pr_number }} from ${owner}/${repo}`);
+
+            const pr = await github.rest.pulls.get({
+              owner: owner,
+              repo: repo,
+              pull_number: ${{ inputs.pr_number }}
+            });
+
+            core.setOutput('pr_branch', pr.data.head.ref);
+            core.setOutput('pr_sha', pr.data.head.sha);
+            core.setOutput('pr_title', pr.data.title);
+            core.setOutput('base_branch', pr.data.base.ref);
+            core.setOutput('pr_repo_owner', owner);
+            core.setOutput('pr_repo_name', repo);
+            core.setOutput('pr_repo_full', `${owner}/${repo}`);
+            core.setOutput('fork_owner', pr.data.head.repo.owner.login);
+            core.setOutput('fork_repo', pr.data.head.repo.name);
+            core.setOutput('clone_url', pr.data.head.repo.clone_url);
+
+            console.log(`PR #${{ inputs.pr_number }}: ${pr.data.title}`);
+            console.log(`Branch: ${pr.data.head.ref}`);
+            console.log(`Base: ${pr.data.base.ref}`);
+            console.log(`Fork: ${pr.data.head.repo.owner.login}/${pr.data.head.repo.name}`);
+
+      - name: Checkout our repository (for scripts)
+        uses: actions/checkout@v4
+        with:
+          path: scripts
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout our repository (for PR code)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          path: pr-code
+
+      - name: Fetch and create branch from PR
+        id: branch_name
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          # Generate random branch name
+          $randomId = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 6 | ForEach-Object {[char]$_})
+          $branchName = "pr-${{ inputs.pr_number }}-sandbox-$randomId"
+
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host "Creating branch: $branchName" -ForegroundColor Cyan
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host ""
+
+          # Determine which repository to fetch from
+          $useUpstream = "${{ inputs.use_upstream_repo }}" -eq "true"
+          if ($useUpstream) {
+            $fetchRepo = "https://github.com/${{ steps.pr_info.outputs.fork_owner }}/${{ steps.pr_info.outputs.fork_repo }}.git"
+            Write-Host "Fetching PR from upstream fork: $fetchRepo" -ForegroundColor Yellow
+          } else {
+            $fetchRepo = "https://github.com/${{ github.repository }}.git"
+            Write-Host "Fetching PR from our repository: $fetchRepo" -ForegroundColor Yellow
+          }
+
+          # Fetch the PR branch
+          Write-Host "Fetching branch: ${{ steps.pr_info.outputs.pr_branch }}" -ForegroundColor Gray
+          git fetch $fetchRepo ${{ steps.pr_info.outputs.pr_branch }}
+
+          # Create new branch from the fetched PR branch
+          Write-Host "Creating branch from FETCH_HEAD..." -ForegroundColor Gray
+          git checkout -b $branchName FETCH_HEAD
+
+          Write-Host ""
+          Write-Host "✓ Branch created: $branchName" -ForegroundColor Green
+          Write-Host ""
+
+          # Merge main to get latest devcontainer configs and other updates
+          Write-Host "Merging latest changes from main..." -ForegroundColor Yellow
+          git fetch origin main
+          git merge origin/main -m "Merge main to include latest devcontainer configs and workflow updates" --no-edit
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ Merge conflict detected!" -ForegroundColor Red
+            Write-Host "This PR has conflicts with main. Please resolve conflicts first." -ForegroundColor Yellow
+            throw "Failed to merge main into PR branch"
+          }
+
+          Write-Host "✓ Merged main successfully" -ForegroundColor Green
+          Write-Host ""
+
+          # Save branch name for later steps
+          echo "name=$branchName" >> $env:GITHUB_OUTPUT
+
+      - name: Configure Git
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure sandbox scripts with environment values
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host "Configuring Sandbox Scripts" -ForegroundColor Cyan
+          Write-Host "================================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "Environment Details:" -ForegroundColor Yellow
+          Write-Host "  Tenant ID: $env:TENANT_ID" -ForegroundColor Gray
+          Write-Host "  Environment: $env:ENVIRONMENT_NAME" -ForegroundColor Gray
+          Write-Host "  Country: $env:COUNTRY" -ForegroundColor Gray
+          Write-Host ""
+
+          # Replace placeholders in configure-sandbox.ps1 files
+          $sysAppScript = ".devcontainer/SystemApplication/configure-sandbox.ps1"
+          $bizFoundScript = ".devcontainer/BusinessFoundation/configure-sandbox.ps1"
+
+          foreach ($scriptPath in @($sysAppScript, $bizFoundScript)) {
+            $content = Get-Content $scriptPath -Raw
+            $content = $content -replace '\{\{TENANT_ID\}\}', $env:TENANT_ID
+            $content = $content -replace '\{\{ENVIRONMENT_NAME\}\}', $env:ENVIRONMENT_NAME
+            $content = $content -replace '\{\{COUNTRY\}\}', $env:COUNTRY
+            $content = $content -replace '\{\{PR_NUMBER\}\}', "${{ inputs.pr_number }}"
+            Set-Content -Path $scriptPath -Value $content -NoNewline
+          }
+
+          Write-Host "✓ Configured sandbox scripts with environment values" -ForegroundColor Green
+          Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
+          Write-Host ""
+
+      - name: Commit and push branch
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          $branchName = "${{ steps.branch_name.outputs.name }}"
+
+          Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
+          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1"
+
+          $commitMessage = @"
+          Add sandbox configuration for Codespaces
+
+          - Tenant ID: $env:TENANT_ID
+          - Environment: $env:ENVIRONMENT_NAME
+          - Country: $env:COUNTRY
+
+          Launch.json will be auto-configured when Codespace starts.
+          Source: PR #${{ inputs.pr_number }}
+          "@
+
+          git commit -m "$commitMessage"
+          Write-Host "✓ Configuration committed" -ForegroundColor Green
+
+          Write-Host "Pushing branch to ${{ github.repository }}..." -ForegroundColor Yellow
+          git push -u origin $branchName
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ Failed to push branch" -ForegroundColor Red
+            throw "Failed to push branch to remote"
+          }
+
+          Write-Host "✓ Branch pushed successfully: $branchName" -ForegroundColor Green
+          Write-Host ""
+
+      - name: Summary
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "================================================" -ForegroundColor Green
+          Write-Host "✓ Configuration Complete!" -ForegroundColor Green
+          Write-Host "================================================" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "Details:" -ForegroundColor Yellow
+          Write-Host "  Source: ${{ steps.pr_info.outputs.pr_repo_full }}" -ForegroundColor Gray
+          Write-Host "  PR: #${{ inputs.pr_number }} - ${{ steps.pr_info.outputs.pr_title }}" -ForegroundColor Gray
+
+          if ("${{ inputs.skip_branch_creation }}" -eq "true") {
+            Write-Host "  Branch: ${{ steps.pr_info.outputs.pr_branch }} (original PR branch)" -ForegroundColor Gray
+          } else {
+            Write-Host "  Branch: ${{ steps.branch_name.outputs.name }} (pushed to ${{ github.repository }})" -ForegroundColor Gray
+          }
+
+          Write-Host "  Environment: $env:ENVIRONMENT_NAME" -ForegroundColor Gray
+          Write-Host "  Tenant: $env:TENANT_ID" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Launch.json configured for:" -ForegroundColor Yellow
+          Write-Host "  ✓ System Application" -ForegroundColor Gray
+          Write-Host "  ✓ Business Foundation" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Codespaces URLs:" -ForegroundColor Yellow
+          Write-Host "  System Application:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json" -ForegroundColor Gray
+          Write-Host "  Business Foundation:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json" -ForegroundColor Gray
+          Write-Host "  Full Repository:" -ForegroundColor Cyan
+          Write-Host "    https://codespaces.new/${{ github.repository }}?ref=${{ steps.branch_name.outputs.name }}&devcontainer_path=.devcontainer/BCApps/devcontainer.json" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Next: Choose a Codespaces workspace above or use local VS Code + F5" -ForegroundColor Cyan
+          Write-Host ""
+
+          if ("${{ inputs.use_upstream_repo }}" -eq "true") {
+            Write-Host "Note: PR was fetched from upstream repository (microsoft/BCApps)" -ForegroundColor Cyan
+            Write-Host "The branch has been pushed to your fork: ${{ github.repository }}" -ForegroundColor Cyan
+          }
+
+      - name: Comment on PR (fork only)
+        if: ${{ !inputs.use_upstream_repo }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Always use the workflow-created branch (where launch.json is configured)
+            const configuredBranch = "${{ steps.branch_name.outputs.name }}";
+            const prBranch = "${{ steps.pr_info.outputs.pr_branch }}";
+            const skipBranchCreation = "${{ inputs.skip_branch_creation }}" === "true";
+
+            // For display purposes
+            const branchName = skipBranchCreation ? prBranch : configuredBranch;
+
+            const comment = `## ⚙️ Configured for Sandbox Environment
+
+            Your PR has been configured for testing in the sandbox environment!
+
+            ### 🚀 Quick Start - Open in Codespaces
+
+            Choose your workspace:
+
+            | Workspace | Open |
+            |-----------|------|
+            | **System Application** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json) |
+            | **Business Foundation** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json) |
+            | **Full Repository** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/${{ github.repository }}?ref=${configuredBranch}&devcontainer_path=.devcontainer/BCApps/devcontainer.json) |
+
+            Each environment includes:
+            - ✅ Opens directly in the correct folder
+            - ✅ Pre-configured development environment
+            - ✅ AL extension already installed
+            - ✅ Launch.json ready for your sandbox
+            - ✅ Just press F5 to publish and debug!
+
+            ### 💻 Or Use Local VS Code
+
+            <details>
+            <summary>Click to expand local setup instructions</summary>
+
+            1. Checkout the branch: \`git checkout ${branchName}\`
+            2. Open workspace in VS Code:
+               - \`src/System Application/SystemApplication.code-workspace\` OR
+               - \`src/Business Foundation/BusinessFoundation.code-workspace\`
+            3. **Press F5** to publish and debug in the sandbox
+            4. Sign in with Microsoft Entra credentials when prompted
+
+            </details>
+
+            ### Environment Details
+            - **Tenant ID**: \`${{ env.TENANT_ID }}\`
+            - **Environment**: \`${{ env.ENVIRONMENT_NAME }}\`
+            - **Country**: \`${{ env.COUNTRY }}\`
+
+            ### Launch.json Configured For
+            - ✅ System Application
+            - ✅ Business Foundation
+
+            ### Branch
+            ${branchName === "${{ steps.pr_info.outputs.pr_branch }}"
+              ? `Configuration on PR branch: \`${branchName}\``
+              : `Configuration committed to: \`${branchName}\``
+            }
+
+            **Note:** Apps are NOT automatically published. Use Codespaces + F5 or local VS Code + F5 to publish.
+
+            ---
+            *Configured by GitHub Actions workflow*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ inputs.pr_number }},
+              body: comment
+            });
+
+      - name: Create workflow summary
+        if: ${{ inputs.use_upstream_repo }}
+        shell: pwsh
+        run: |
+          # Always use the workflow-created branch (where launch.json is configured)
+          $configuredBranch = "${{ steps.branch_name.outputs.name }}"
+          $prBranch = "${{ steps.pr_info.outputs.pr_branch }}"
+          $skipBranchCreation = "${{ inputs.skip_branch_creation }}" -eq "true"
+
+          # For display purposes
+          $branchName = if ($skipBranchCreation) { $prBranch } else { $configuredBranch }
+
+          $repoName = "${{ github.repository }}"
+          # Codespaces URLs for each workspace
+          $sysAppUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/SystemApplication/devcontainer.json"
+          $bizFoundUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/BusinessFoundation/devcontainer.json"
+          $fullRepoUrl = "https://codespaces.new/$repoName`?ref=$configuredBranch&devcontainer_path=.devcontainer/BCApps/devcontainer.json"
+
+          $summary = @"
+          ## ⚙️ Configured PR from microsoft/BCApps for Sandbox
+
+          Successfully configured PR from the upstream repository for testing in your sandbox environment!
+
+          ### 🚀 Quick Start - Open in Codespaces
+
+          Choose your workspace:
+
+          | Workspace | Open |
+          |-----------|------|
+          | **System Application** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($sysAppUrl) |
+          | **Business Foundation** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($bizFoundUrl) |
+          | **Full Repository** | [![Open in Codespaces](https://github.com/codespaces/badge.svg)]($fullRepoUrl) |
+
+          Each environment includes:
+          - ✅ Pre-configured development environment in the cloud
+          - ✅ AL extension already installed and ready
+          - ✅ Launch.json configured for your sandbox
+          - ✅ Just press F5 to publish and debug!
+
+          **No local setup needed!**
+
+          ---
+
+          ### 💻 Or Use Local VS Code
+
+          <details>
+          <summary>Click to expand local setup instructions</summary>
+
+          1. Checkout the branch: ``git fetch && git checkout $branchName``
+          2. Open workspace in VS Code:
+             - ``src/System Application/SystemApplication.code-workspace`` OR
+             - ``src/Business Foundation/BusinessFoundation.code-workspace``
+          3. **Press F5** to publish and debug in the sandbox
+          4. Sign in with Microsoft Entra credentials when prompted
+
+          </details>
+
+          ---
+
+          ### Source PR
+          - **Repository**: ${{ steps.pr_info.outputs.pr_repo_full }}
+          - **PR Number**: #${{ inputs.pr_number }}
+          - **PR Title**: ${{ steps.pr_info.outputs.pr_title }}
+
+          ### Environment Details
+          - **Tenant ID**: ``$env:TENANT_ID``
+          - **Environment**: ``$env:ENVIRONMENT_NAME``
+          - **Country**: ``$env:COUNTRY``
+
+          ### Launch.json Configured For
+          - ✅ System Application
+          - ✅ Business Foundation
+
+          ### Branch Created
+          $(if ("${{ inputs.skip_branch_creation }}" -eq "true") {
+            "Configuration on PR branch: ``$branchName``"
+          } else {
+            "Configuration committed to: ``$branchName`` in your fork"
+          })
+
+          ### Note
+          - Apps are **NOT automatically published** by this pipeline
+          - Use **Codespaces + F5** or **local VS Code + F5** to publish apps
+          - Since this PR is from the upstream repository (microsoft/BCApps), a comment could not be posted on the original PR
+          - The configuration has been successfully created in your fork repository
+          "@
+
+          echo $summary >> $env:GITHUB_STEP_SUMMARY
+          Write-Host $summary
+
