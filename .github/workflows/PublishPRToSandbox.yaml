@@ -194,6 +194,23 @@ jobs:
           Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
 
+      - name: Remove AL entries from gitignore
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          Write-Host "Removing AL-specific gitignore entries..." -ForegroundColor Yellow
+
+          # Remove AL template section from .gitignore
+          $gitignorePath = ".gitignore"
+          if (Test-Path $gitignorePath) {
+            $content = Get-Content $gitignorePath -Raw
+            # Remove everything from "### AL ###" to the end of AL section
+            $content = $content -replace '(?s)### AL ###.*?(?=\r?\n\r?\n###|\r?\n\r?\n\r?\n|$)', ''
+            Set-Content -Path $gitignorePath -Value $content.TrimEnd() -NoNewline
+            Write-Host "✓ Removed AL entries from .gitignore" -ForegroundColor Green
+          }
+
       - name: Commit and push branch
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
@@ -202,14 +219,15 @@ jobs:
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
           Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
-          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1"
+          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1" ".gitignore"
 
           $commitMessage = @"
-          Add sandbox configuration for Codespaces
+          Configure sandbox environment for Codespaces
 
           - Tenant ID: $env:TENANT_ID
           - Environment: $env:ENVIRONMENT_NAME
           - Country: $env:COUNTRY
+          - Removed AL entries from .gitignore (allow .vscode/ folders)
 
           Launch.json will be auto-configured when Codespace starts.
           Source: PR #${{ inputs.pr_number }}
