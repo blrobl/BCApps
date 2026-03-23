@@ -1,24 +1,16 @@
 #!/usr/bin/env pwsh
 
 # Sandbox configuration (filled by workflow)
-$tenantId = "{{TENANT_ID}}"
-$environmentName = "{{ENVIRONMENT_NAME}}"
-$country = "{{COUNTRY}}"
-$prNumber = "{{PR_NUMBER}}"
+$tenantId = "f0ac72d1-c1b3-4c2a-a196-8fb82cac5934"
+$environmentName = "a47676_p47575_US_29-0-cdsb"
+$country = "us"
+$prNumber = "1"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Configuring Sandbox Environment" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-
-# Check if this was configured by the workflow
-if ($tenantId -eq "{{TENANT_ID}}") {
-    Write-Host "⚠️  No sandbox configuration found" -ForegroundColor Yellow
-    Write-Host "This branch wasn't created by the sandbox workflow." -ForegroundColor Gray
-    Write-Host ""
-    exit 0
-}
 
 Write-Host "Environment Details:" -ForegroundColor Yellow
 Write-Host "  Tenant ID: $tenantId" -ForegroundColor Gray
