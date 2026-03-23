@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Creates launch.json files for BC SaaS Sandbox in workspace folders.
+    Creates launch.json files for BC SaaS Sandbox in all AL projects.
 
 .PARAMETER TenantId
     The Microsoft Entra tenant ID.
@@ -32,52 +32,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function New-LaunchJson {
-    param(
-        [string] $FolderPath,
-        [string] $TenantId,
-        [string] $EnvironmentName
-    )
-
-    $vscodePath = Join-Path $FolderPath ".vscode"
-    $launchPath = Join-Path $vscodePath "launch.json"
-
-    # Create .vscode folder
-    if (!(Test-Path $vscodePath)) {
-        New-Item -Path $vscodePath -ItemType Directory -Force | Out-Null
-    }
-
-    # Create launch.json with AL configuration
-    $launchConfig = @{
-        "version" = "0.2.0"
-        "configurations" = @(
-            @{
-                "type" = "al"
-                "request" = "launch"
-                "name" = "Cloud Sandbox ($EnvironmentName)"
-                "environmentType" = "Sandbox"
-                "environmentName" = $EnvironmentName
-                "tenant" = $TenantId
-                "authentication" = "AAD"
-                "startupObjectType" = "Page"
-                "startupObjectId" = 22
-                "schemaUpdateMode" = "Synchronize"
-                "breakOnError" = $true
-                "launchBrowser" = $true
-                "enableLongRunningSqlStatements" = $true
-                "enableSqlInformationDebugger" = $true
-            }
-        )
-    }
-
-    $launchConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $launchPath -Force
-    Write-Host "  ✓ Created: $launchPath" -ForegroundColor Green
-}
+# Import AL Dev utilities
+Import-Module (Join-Path $BaseFolder "build\scripts\DevEnv\ALDev.psm1") -DisableNameChecking -Force
 
 try {
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Cyan
-    Write-Host "Creating launch.json for BC Sandbox" -ForegroundColor Cyan
+    Write-Host "Configuring AL Projects for Cloud Sandbox" -ForegroundColor Cyan
     Write-Host "============================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Environment: $EnvironmentName" -ForegroundColor Yellow
@@ -86,47 +47,54 @@ try {
 
     Push-Location $BaseFolder
 
-    # System Application folders
-    $sysAppFolders = @(
-        "src/System Application/App"
-        "src/System Application/Test"
-        "src/System Application/Test Library"
+    # Cloud Sandbox launch settings
+    $launchSettings = @{
+        "type" = "al"
+        "request" = "launch"
+        "name" = "Cloud Sandbox ($EnvironmentName)"
+        "environmentType" = "Sandbox"
+        "environmentName" = $EnvironmentName
+        "tenant" = $TenantId
+        "authentication" = "AAD"
+        "startupObjectType" = "Page"
+        "startupObjectId" = 22
+        "schemaUpdateMode" = "Synchronize"
+        "breakOnError" = $true
+        "launchBrowser" = $true
+        "enableLongRunningSqlStatements" = $true
+        "enableSqlInformationDebugger" = $true
+    }
+
+    # Find and configure all AL projects in System Application and Business Foundation
+    $folders = @(
+        "src/System Application"
+        "src/Business Foundation"
     )
 
-    Write-Host "System Application:" -ForegroundColor White
-    foreach ($folder in $sysAppFolders) {
+    foreach ($folder in $folders) {
         $fullPath = Join-Path $BaseFolder $folder
         if (Test-Path $fullPath) {
-            New-LaunchJson -FolderPath $fullPath -TenantId $TenantId -EnvironmentName $EnvironmentName
-        } else {
-            Write-Host "  ⚠ Skipped (not found): $folder" -ForegroundColor Yellow
+            Write-Host "Configuring projects in: $folder" -ForegroundColor White
+
+            # Find all app.json files (AL projects)
+            $appFolders = Get-ChildItem $fullPath -Directory -Recurse |
+                Where-Object { Test-Path (Join-Path $_.FullName "app.json") } |
+                ForEach-Object { $_.FullName }
+
+            foreach ($appFolder in $appFolders) {
+                $relativePath = $appFolder.Replace("$BaseFolder\", "").Replace($BaseFolder + "\", "")
+                Write-Host "  → $relativePath" -ForegroundColor Gray
+                Configure-ALProject -ProjectFolder $appFolder -LaunchSettings $launchSettings -ProjectSettings @{}
+            }
+            Write-Host ""
         }
     }
-    Write-Host ""
-
-    # Business Foundation folders
-    $bizFoundFolders = @(
-        "src/Business Foundation/App"
-        "src/Business Foundation/Test"
-        "src/Business Foundation/Test Library"
-    )
-
-    Write-Host "Business Foundation:" -ForegroundColor White
-    foreach ($folder in $bizFoundFolders) {
-        $fullPath = Join-Path $BaseFolder $folder
-        if (Test-Path $fullPath) {
-            New-LaunchJson -FolderPath $fullPath -TenantId $TenantId -EnvironmentName $EnvironmentName
-        } else {
-            Write-Host "  ⚠ Skipped (not found): $folder" -ForegroundColor Yellow
-        }
-    }
-    Write-Host ""
 
     Write-Host "============================================" -ForegroundColor Green
     Write-Host "✓ Configuration Complete!" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Press F5 in any folder to publish and debug!" -ForegroundColor Cyan
+    Write-Host "Press F5 in any AL project to publish!" -ForegroundColor Cyan
     Write-Host ""
 }
 catch {
