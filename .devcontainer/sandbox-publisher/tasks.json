@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Publish to BC Sandbox",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "To publish apps to the sandbox:\n1. Open a workspace (System Application or Business Foundation)\n2. Press F5 to publish and debug\n3. Sign in with your Microsoft Entra credentials when prompted"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open System Application Workspace",
+      "type": "shell",
+      "command": "code",
+      "args": [
+        "\"${workspaceFolder}/src/System Application/SystemApplication.code-workspace\""
+      ],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open Business Foundation Workspace",
+      "type": "shell",
+      "command": "code",
+      "args": [
+        "\"${workspaceFolder}/src/Business Foundation/BusinessFoundation.code-workspace\""
+      ],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
