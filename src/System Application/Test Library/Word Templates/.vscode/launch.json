@@ -1,0 +1,21 @@
+{
+  "configurations": [
+    {
+      "environmentType": "Sandbox",
+      "startupObjectId": 22,
+      "enableLongRunningSqlStatements": true,
+      "breakOnError": true,
+      "environmentName": "a47676_p47575_US_29-0-cdsb",
+      "startupObjectType": "Page",
+      "schemaUpdateMode": "Synchronize",
+      "request": "launch",
+      "name": "Cloud Sandbox (a47676_p47575_US_29-0-cdsb)",
+      "authentication": "AAD",
+      "tenant": "f0ac72d1-c1b3-4c2a-a196-8fb82cac5934",
+      "enableSqlInformationDebugger": true,
+      "type": "al",
+      "launchBrowser": true
+    }
+  ],
+  "version": "0.2.0"
+}
