@@ -194,6 +194,27 @@ jobs:
           Write-Host "Launch.json will be configured automatically when Codespace starts" -ForegroundColor Cyan
           Write-Host ""
 
+      - name: Configure launch.json files
+        if: ${{ !inputs.skip_branch_creation }}
+        shell: pwsh
+        working-directory: pr-code
+        run: |
+          Write-Host "Creating launch.json files..." -ForegroundColor Yellow
+
+          # Run the configuration script from scripts directory
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "scripts\.github\scripts\PublishToSandbox.ps1"
+          $prCodePath = Join-Path $env:GITHUB_WORKSPACE "pr-code"
+
+          & $scriptPath `
+            -TenantId $env:TENANT_ID `
+            -EnvironmentName $env:ENVIRONMENT_NAME `
+            -Country $env:COUNTRY `
+            -BaseFolder $prCodePath
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to configure launch.json files"
+          }
+
       - name: Remove AL entries from gitignore
         if: ${{ !inputs.skip_branch_creation }}
         shell: pwsh
@@ -219,7 +240,7 @@ jobs:
           $branchName = "${{ steps.branch_name.outputs.name }}"
 
           Write-Host "Committing sandbox configuration..." -ForegroundColor Yellow
-          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1" ".gitignore"
+          git add ".devcontainer/SystemApplication/configure-sandbox.ps1" ".devcontainer/BusinessFoundation/configure-sandbox.ps1" ".gitignore" "src/"
 
           $commitMessage = @"
           Configure sandbox environment for Codespaces
@@ -227,9 +248,10 @@ jobs:
           - Tenant ID: $env:TENANT_ID
           - Environment: $env:ENVIRONMENT_NAME
           - Country: $env:COUNTRY
-          - Removed AL entries from .gitignore (allow .vscode/ folders)
+          - Created launch.json files in all AL projects
+          - Removed AL entries from .gitignore
 
-          Launch.json will be auto-configured when Codespace starts.
+          Ready to use: Just open Codespace and press F5!
           Source: PR #${{ inputs.pr_number }}
           "@
 
